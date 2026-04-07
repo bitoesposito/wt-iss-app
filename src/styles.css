@@ -2,3 +2,5 @@
 
 @import 'tailwindcss';
 @import 'primeicons/primeicons.css';
+@import "@esri/calcite-components/main.css";
+@import "@arcgis/map-components/main.css";

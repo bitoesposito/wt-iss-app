@@ -1,17 +1,27 @@
-import { Component, signal } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit, signal } from '@angular/core';
 
-import { SidebarComponent } from './ui/sidebar-component/sidebar-component';
-import { MapComponent } from './ui/map-component/map-component';
+// Services
+import { IssTrackerService } from './services/iss-tracker';
+import { IssPosition } from './interfaces/position.interface';
+
+// Components
+import { SidebarComponent } from './components/sidebar-component/sidebar';
+import { MapComponent } from './components/map/map';
 
 @Component({
   selector: 'app-root',
   imports: [
     SidebarComponent,
-    MapComponent,
+    MapComponent
   ],
-  templateUrl: './app.html'
+  templateUrl: './app.html',
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
 })
+
 export class App {
-  protected readonly title = signal('iss-app');
+  constructor (
+    private readonly issTrackerService: IssTrackerService
+  ) {}
+
+  
 }

@@ -1,0 +1,44 @@
+<main class="h-full w-full flex flex-col">
+  <header class="border-b border-slate-800 px-4 py-3 select-none">
+    <img src="assets/esri.svg" alt="Esri" class="invert mb-2" />
+
+    <h1 class="text-base font-semibold leading-none mb-0">Mappa ISS</h1>
+    <p class="mt-1 text-sm text-slate-400">Storico posizioni aggiornato ogni 10 secondi</p>
+  </header>
+
+  <div class="px-4 py-3 flex flex-col gap-2 overflow-y-auto h-full">
+    @if (isLoading) {
+      <p class="text-sm text-slate-400 select-none">Caricamento delle posizioni...</p>
+    } @else {
+      @for (position of positions; track position.id) {
+        <p-card
+          [unstyled]="true"
+          [pt]="{
+            root: getCardRootClass(position.id),
+          }"
+          tabindex="0"
+          role="button"
+          [attr.aria-label]="'Seleziona posizione ' + position.date.toLocaleString()"
+          (click)="handleSelectPosition(position.id)"
+          (keydown.enter)="handleSelectPosition(position.id)"
+          (keydown.space)="handleSelectPosition(position.id)"
+        >
+          <div class="flex gap-2 items-center mb-1">
+            <i class="pi pi-map-marker mr-2"></i>
+            <div class="flex flex-col w-1/2">
+              <p class="uppercase text-xs text-slate-400 leading-none">Latitudine:</p>
+              <p class="text-sm font-medium leading-none">{{ position.latitude.toFixed(6) }}</p>
+            </div>
+            <div class="flex flex-col w-1/2">
+              <p class="uppercase text-xs text-slate-400 leading-none">Longitudine:</p>
+              <p class="text-sm font-medium leading-none">{{ position.longitude.toFixed(6) }}</p>
+            </div>
+          </div>
+          <p class="text-xs leading-none text-slate-400">{{ position.date.toLocaleString() }}</p>
+        </p-card>
+      } @empty {
+        <p class="text-sm text-slate-400 select-none">Nessuna posizione trovata</p>
+      }
+    }
+  </div>
+</main>
