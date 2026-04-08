@@ -10,6 +10,10 @@ import '@arcgis/map-components/components/arcgis-compass'
 import '@arcgis/map-components/components/arcgis-expand'
 import '@arcgis/map-components/components/arcgis-sketch'
 
+import { defineCustomElements } from '@esri/calcite-components/dist/loader'
+
+defineCustomElements(window)
+
 document.documentElement.classList.add('app-dark')
 
 bootstrapApplication(App, appConfig)

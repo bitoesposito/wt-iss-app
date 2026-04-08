@@ -3,11 +3,9 @@ import { Injectable, effect, inject, signal } from '@angular/core'
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer'
 import Graphic from '@arcgis/core/Graphic'
 import Point from '@arcgis/core/geometry/Point'
-import Popup from '@arcgis/core/widgets/Popup'
-import * as reactiveUtils from '@arcgis/core/core/reactiveUtils'
 
-import * as satellite from 'satellite.js'
 import { SatellitesStoreService } from '../store/satellites-store'
+import { SatelliteOrbitService } from '../services/satellite-orbit.service'
 
 type SceneMap = { addMany: (layers: unknown[]) => void }
 
@@ -29,22 +27,19 @@ export type SatellitesSceneElement = {
 export class SatellitesSceneControllerService {
   private isInitialized = false
   private readonly satellitesStoreService = inject(SatellitesStoreService)
+  private readonly satelliteOrbitService = inject(SatelliteOrbitService)
 
   private readonly sceneEl = signal<SatellitesSceneElement | null>(null)
   private readonly satelliteLayer = signal<GraphicsLayer | null>(null)
-  private readonly satelliteTracks = signal<GraphicsLayer | null>(null)
-  private cleanupHandles: Array<{ remove?: () => void }> = []
 
   constructor () {
     effect(() => {
       const sceneEl = this.sceneEl()
       const layer = this.satelliteLayer()
-      const tracks = this.satelliteTracks()
-      if (!sceneEl || !layer || !tracks) return
+      if (!sceneEl || !layer) return
 
       const selected = this.satellitesStoreService.selectedSatellites()
       layer.removeAll()
-      tracks.removeAll()
 
       if (!selected.length) return
 
@@ -58,7 +53,7 @@ export class SatellitesSceneControllerService {
         const launchNum = Number(designator.substring(2, 5)).toString()
         const noradId = Number(s.line1.substring(3, 7))
 
-        const satelliteLoc = this.getSatelliteLocation(new Date(time), s.line1, s.line2)
+        const satelliteLoc = this.satelliteOrbitService.getSatelliteLocation(new Date(time), s.line1, s.line2)
         if (!satelliteLoc) continue
 
         const satellitePoint = new Point(satelliteLoc as any)
@@ -90,14 +85,6 @@ export class SatellitesSceneControllerService {
           popupTemplate: {
             title: '{name}',
             content: 'Launch number {number} of {year}',
-            actions: [
-              {
-                type: 'button' as const,
-                title: 'Show Satellite Track',
-                id: 'track',
-                className: 'esri-icon-globe',
-              },
-            ],
           },
         })
 
@@ -128,95 +115,27 @@ export class SatellitesSceneControllerService {
       altitude: { max: 12000000000 },
     }
 
-    sceneEl.popup = new Popup({
-      dockEnabled: true,
-      dockOptions: {
-        breakpoint: false,
-      },
-    })
-
     sceneEl.environment = {
       lighting: { type: 'virtual' },
     }
 
     await sceneEl.viewOnReady()
 
-    const satelliteLayer = new GraphicsLayer()
-    const satelliteTracks = new GraphicsLayer()
+    const satelliteLayer = new GraphicsLayer({
+      title: 'Satellites',
+    })
     ;(satelliteLayer as any).elevationInfo = { mode: 'absolute-height' }
-    ;(satelliteTracks as any).elevationInfo = { mode: 'absolute-height' }
-    sceneEl.map.addMany([satelliteLayer, satelliteTracks])
+    sceneEl.map.addMany([satelliteLayer])
 
     this.sceneEl.set(sceneEl)
     this.satelliteLayer.set(satelliteLayer)
-    this.satelliteTracks.set(satelliteTracks)
-
-    const watchHandle = reactiveUtils.watch(
-      () => (sceneEl.popup as { selectedFeature?: unknown } | undefined)?.selectedFeature,
-      () => {
-        satelliteTracks.removeAll()
-      },
-    )
-    this.cleanupHandles.push(watchHandle as any)
-
-    const popupOnHandle = (sceneEl.popup as { on?: (name: string, cb: (ev: any) => void) => unknown } | undefined)?.on?.(
-      'trigger-action',
-      (popupEvent: any) => {
-        if (popupEvent?.action?.id !== 'track') return
-        satelliteTracks.removeAll()
-
-        const selected = (sceneEl.popup as any)?.selectedFeature as any
-        if (!selected?.attributes) return
-
-        const trackFeatures: Array<[number, number, number]> = []
-        for (let m = 0; m < 60 * 24; m++) {
-          const loc = this.getSatelliteLocation(
-            new Date(selected.attributes.time + m * 1000 * 60),
-            selected.attributes.line1,
-            selected.attributes.line2,
-          )
-          if (!loc) continue
-          trackFeatures.push([loc.x, loc.y, loc.z])
-        }
-
-        const track = new Graphic({
-          geometry: {
-            type: 'polyline',
-            paths: [trackFeatures],
-            hasZ: true,
-            spatialReference: { wkid: 4326 },
-          },
-          symbol: {
-            type: 'line-3d',
-            symbolLayers: [
-              {
-                type: 'line',
-                material: { color: [192, 192, 192, 0.5] },
-                size: 3,
-              },
-            ],
-          },
-        })
-
-        satelliteTracks.add(track)
-      },
-    )
-    if (popupOnHandle && typeof popupOnHandle === 'object') {
-      this.cleanupHandles.push(popupOnHandle as any)
-    }
 
     this.isInitialized = true
   }
 
   detach () {
-    for (const h of this.cleanupHandles) {
-      h?.remove?.()
-    }
-    this.cleanupHandles = []
-
     this.sceneEl.set(null)
     this.satelliteLayer.set(null)
-    this.satelliteTracks.set(null)
     this.isInitialized = false
   }
 
@@ -225,7 +144,7 @@ export class SatellitesSceneControllerService {
     const layer = this.satelliteLayer()
     if (!sceneEl || !layer) return
 
-    const satelliteLoc = this.getSatelliteLocation(new Date(), sat.line1, sat.line2)
+    const satelliteLoc = this.satelliteOrbitService.getSatelliteLocation(new Date(), sat.line1, sat.line2)
     if (!satelliteLoc) return
 
     const point = new Point(satelliteLoc as any)
@@ -254,14 +173,6 @@ export class SatellitesSceneControllerService {
         popupTemplate: {
           title: '{name}',
           content: 'Satellite position',
-          actions: [
-            {
-              type: 'button' as const,
-              title: 'Show Satellite Track',
-              id: 'track',
-              className: 'esri-icon-globe',
-            },
-          ],
         },
       })
 
@@ -280,44 +191,5 @@ export class SatellitesSceneControllerService {
       ?.catch?.(() => {})
   }
 
-  private getSatelliteLocation (
-    date: Date,
-    line1: string,
-    line2: string,
-  ): { type: 'point', x: number, y: number, z: number, hasZ: true, spatialReference: { wkid: 4326 } } | null {
-    try {
-      const satrec = (satellite as any).twoline2satrec(line1, line2)
-
-      // satellite.js v7: propagate(satrec, Date) -> { position, velocity } | null
-      const pv = (satellite as any).propagate(satrec, date)
-      if (pv === null) return null
-
-      const positionEci = pv.position
-      if (!positionEci) return null
-
-      const gmst = (satellite as any).gstime(date)
-      const positionGd = (satellite as any).eciToGeodetic(positionEci, gmst)
-      const rad2deg = 180 / Math.PI
-
-      let longitude = positionGd.longitude
-      let latitude = positionGd.latitude
-      const height = positionGd.height
-      if (Number.isNaN(longitude) || Number.isNaN(latitude) || Number.isNaN(height)) return null
-
-      while (longitude < -Math.PI) longitude += 2 * Math.PI
-      while (longitude > Math.PI) longitude -= 2 * Math.PI
-
-      return {
-        type: 'point',
-        x: rad2deg * longitude,
-        y: rad2deg * latitude,
-        z: height * 1000,
-        hasZ: true,
-        spatialReference: { wkid: 4326 },
-      }
-    } catch {
-      return null
-    }
-  }
 }
 

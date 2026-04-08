@@ -15,8 +15,8 @@
     <arcgis-zoom class="pb-3" slot="top-left"></arcgis-zoom>
     <arcgis-navigation-toggle class="pb-3" slot="top-left"></arcgis-navigation-toggle>
     <arcgis-compass slot="top-left"></arcgis-compass>
-    <arcgis-expand slot="top-right" [expandIcon]="'sky-plot'">
-      <arcgis-sketch [sketchIcon]="'sky-plot'"> </arcgis-sketch>
+    <arcgis-expand slot="top-right" expanded [expandIcon]="'sky-plot'">
+      <app-satellite-orbit-tracker class="w-full overflow-hidden"/>
     </arcgis-expand>
   </arcgis-scene>
 }

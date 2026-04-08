@@ -3,6 +3,7 @@ import { CUSTOM_ELEMENTS_SCHEMA, ChangeDetectionStrategy, Component, OnDestroy, 
 import { ViewModeStoreService } from '../../store/view-mode-store'
 import { IssMapControllerService, IssMapView } from '../../controller/iss-map-controller'
 import { SatellitesSceneControllerService, SatellitesSceneElement } from '../../controller/satellites-scene-controller'
+import { SatelliteOrbitTracker } from '../widget/satellite-orbit-tracker/satellite-orbit-tracker';
 
 type MapElement = {
 	graphics?: unknown
@@ -13,7 +14,7 @@ type SceneElement = SatellitesSceneElement
 
 @Component({
 	selector: 'app-map',
-	imports: [],
+	imports: [SatelliteOrbitTracker],
 	schemas: [CUSTOM_ELEMENTS_SCHEMA],
 	templateUrl: './map.html',
 	changeDetection: ChangeDetectionStrategy.OnPush,

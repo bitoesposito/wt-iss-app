@@ -1,0 +1,225 @@
+<main class="max-w-[320px] px-3 py-2 text-sm h-full">
+  <h2 class="text-base font-semibold">Satellite Orbit Tracker</h2>
+
+  <section class="mb-3">
+    <arcgis-sketch
+      toolbar-kind="docked"
+      layout="horizontal"
+      [availableCreateTools]="['point']"
+      [creationMode]="'single'"
+      [hideSelectionTools]="true"
+      [hideCreateToolsPolygon]="true"
+      [hideCreateToolsPolyline]="true"
+      [hideCreateToolsRectangle]="true"
+      [hideCreateToolsCircle]="true"
+      [hideCreateToolsMultipoint]="true"
+      [showCreateToolsFreehandPolygon]="false"
+      [showCreateToolsFreehandPolyline]="false"
+      (arcgisReady)="handleSketchReady($event)"
+      (arcgisCreate)="handleSketchCreate($event)"
+      (arcgisDelete)="handleSketchDelete($event)"
+    ></arcgis-sketch>
+
+    <div class="mt-2">
+      @if (point(); as p) {
+        <div class="text-xs opacity-90">
+          Punto selezionato:
+          <span class="font-medium">{{ getPointLat(p).toFixed(5) }}</span
+          >,
+          <span class="font-medium">{{ getPointLon(p).toFixed(5) }}</span>
+        </div>
+      } @else {
+        <div class="text-xs opacity-80">Nessun punto selezionato.</div>
+      }
+    </div>
+
+    @if (!validation().hasPoint) {
+      <div class="mt-2 text-red-500 leading-tight">
+        Seleziona un punto sulla mappa.
+      </div>
+    }
+  </section>
+
+  <section class="mb-3 grid gap-2">
+    <calcite-label class="grid gap-1">
+      <span class="text-xs opacity-80">Area di interesse (km)</span>
+      <calcite-input-number
+        min="10"
+        step="1"
+        integer
+        number-button-type="horizontal"
+        [value]="bufferKmValue.toString()"
+        [disabled]="areButtonsDisabled()"
+        label="Area di interesse in chilometri"
+        (calciteInputNumberChange)="handleBufferChange($event)"
+      />
+    </calcite-label>
+    @if (!validation().isBufferValid) {
+      <div class="text-red-500 leading-tight">Inserisci un buffer valido (minimo 10 km).</div>
+    }
+
+    <div class="grid grid-cols-2 gap-2">
+      <div class="grid gap-2">
+        <calcite-label class="grid gap-1">
+          <span class="text-xs opacity-80">Inizio (data)</span>
+          <calcite-input-date-picker
+            [valueAsDate]="startDateTimeLocalValue"
+            [disabled]="areButtonsDisabled()"
+            label="Data di inizio"
+            (calciteInputDatePickerChange)="handleStartDayChange($event)"
+          />
+        </calcite-label>
+        @if (!validation().hasStartDay) {
+          <div class="mt-2 text-red-500 leading-tight">Seleziona la data di inizio.</div>
+        }
+
+        <calcite-label class="grid gap-1">
+          <span class="text-xs opacity-80">Inizio (ora)</span>
+          <calcite-input-time-picker
+            hour-format="24"
+            step="60"
+            [value]="startTime()"
+            [disabled]="areButtonsDisabled()"
+            label="Ora di inizio"
+            (calciteInputTimePickerChange)="handleStartTimeChange($event)"
+          />
+        </calcite-label>
+        @if (!validation().isStartTimeValid) {
+          <div class="mt-2 text-red-500 leading-tight">Seleziona un’ora valida.</div>
+        }
+      </div>
+
+      <div class="grid gap-2">
+        <calcite-label class="grid gap-1">
+          <span class="text-xs opacity-80">Fine (data)</span>
+          <calcite-input-date-picker
+            [valueAsDate]="endDateTimeLocalValue"
+            [disabled]="areButtonsDisabled()"
+            label="Data di fine"
+            (calciteInputDatePickerChange)="handleEndDayChange($event)"
+          />
+        </calcite-label>
+        @if (!validation().hasEndDay) {
+          <div class="text-[11px] text-red-200/90">Seleziona la data di fine.</div>
+        }
+
+        <calcite-label class="grid gap-1">
+          <span class="text-xs opacity-80">Fine (ora)</span>
+          <calcite-input-time-picker
+            hour-format="24"
+            step="60"
+            [value]="endTime()"
+            [disabled]="areButtonsDisabled()"
+            label="Ora di fine"
+            (calciteInputTimePickerChange)="handleEndTimeChange($event)"
+          />
+        </calcite-label>
+        @if (!validation().isEndTimeValid) {
+          <div class="mt-2 text-red-500 leading-tight">Seleziona un’ora valida.</div>
+        }
+      </div>
+    </div>
+
+    @if (validation().hasStartDay && validation().hasEndDay && !validation().isRangeValid) {
+      <div class="mt-2 text-red-500 leading-tight">
+        L’intervallo non è valido: la data/ora di fine deve essere successiva all’inizio.
+      </div>
+    }
+
+    @if (!validation().hasSatellites) {
+      <div class="mt-2 text-red-500 leading-tight">
+        Seleziona almeno un satellite.
+      </div>
+    }
+
+    <calcite-button
+      width="full"
+      appearance="outline"
+      kind="neutral"
+      [disabled]="areButtonsDisabled()"
+      (click)="handleUseNowRange()"
+    >
+      Imposta 1 ora da adesso
+    </calcite-button>
+  </section>
+
+  <section class="mb-3">
+    <calcite-button
+      width="full"
+      kind="brand"
+      [disabled]="!canRunCalculation()"
+      (click)="handleRunCalculation()"
+    >
+      @if (isRunning()) {
+        Calcolo in corso...
+      } @else {
+        Avvia calcolo
+      }
+    </calcite-button>
+  </section>
+
+  <section class="mb-3">
+    <calcite-button
+      width="full"
+      appearance="outline"
+      kind="neutral"
+      [disabled]="areButtonsDisabled()"
+      (click)="handleOpenResultsDialog()"
+    >
+      Apri risultati ({{ results().length }})
+    </calcite-button>
+  </section>
+
+  @if (error(); as err) {
+    <section
+      class="mb-3 rounded border border-red-500/30 bg-red-500/10 px-2 py-2 text-red-500"
+    >
+      {{ err }}
+    </section>
+  }
+
+  <calcite-dialog
+    heading="Risultati"
+    [dragEnabled]="true"
+    [open]="isResultsDialogOpen()"
+    (calciteDialogClose)="handleCloseResultsDialog()"
+  >
+    <div class="px-2 py-2 text-xs">
+      <div class="mb-2 flex items-center justify-between">
+        <div class="font-medium">Totale</div>
+        <div class="opacity-80">{{ results().length }}</div>
+      </div>
+
+      @if (!results().length) {
+        <div class="opacity-80">Nessun risultato.</div>
+      } @else {
+        <div class="max-h-64 overflow-auto">
+          <ul class="grid gap-1">
+            @for (r of results(); track r.startTimestamp + r.endTimestamp + r.satName) {
+              <li class="rounded bg-white/5 px-2 py-2">
+                <div class="text-xs font-medium">{{ r.satName }}</div>
+                <div class="text-[11px] opacity-80">
+                  {{ r.startTimestamp | date: 'medium' }} → {{ r.endTimestamp | date: 'medium' }}
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      <calcite-button
+        class="mt-3"
+        width="full"
+        kind="neutral"
+        appearance="outline"
+        (click)="handleCloseResultsDialog()"
+      >
+        Chiudi
+      </calcite-button>
+    </div>
+
+    <calcite-button slot="primary" kind="brand" (click)="handleCloseResultsDialog()">
+      Chiudi
+    </calcite-button>
+  </calcite-dialog>
+</main>
