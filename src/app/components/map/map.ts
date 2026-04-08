@@ -95,7 +95,8 @@ export class MapComponent implements OnDestroy {
 
     const timestamp = this.positionStoreService.selectedTimestamp()
     if (!timestamp) {
-      view.closePopup?.().catch(() => {})
+      const closePromise = view.closePopup?.()
+      closePromise?.catch(() => {})
       return
     }
     const intent = this.positionStoreService.selectionIntent()
@@ -106,15 +107,18 @@ export class MapComponent implements OnDestroy {
     const graphic = this.graphicByTimestamp().get(timestamp)
 
     if (intent !== 'click') {
-      view.closePopup?.().catch(() => {})
+      const closePromise = view.closePopup?.()
+      closePromise?.catch(() => {})
     }
 
-    view.goTo?.(
+    const goToPromise = view.goTo?.(
       {
         center: [position.longitude, position.latitude],
       },
       { animate: true },
-    ).then(() => {
+    )
+
+    goToPromise?.then(() => {
       if (intent !== 'click') return
       if (!graphic) return
 
@@ -122,7 +126,7 @@ export class MapComponent implements OnDestroy {
         features: [graphic],
         location: (graphic as { geometry?: unknown } | undefined)?.geometry,
       })
-    }).catch(() => {})
+    })?.catch(() => {})
   })
 
   // Questo evento viene emesso dal web component ArcGIS quando la view è pronta.
@@ -244,7 +248,7 @@ export class MapComponent implements OnDestroy {
       },
       popupTemplate: {
         title: '{name}',
-        content: 'Posizione della International Space Station al <br /> <b>' + timestamp + '</b>',
+        content: 'Posizione della ISS al: <br /> <b>' + timestamp + '</b>',
       },
     }
   }
