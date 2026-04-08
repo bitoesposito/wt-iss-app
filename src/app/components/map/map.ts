@@ -1,5 +1,5 @@
-import { CUSTOM_ELEMENTS_SCHEMA, Component, OnDestroy } from '@angular/core'
-import { Subscription, combineLatest, distinctUntilChanged, switchMap, timer } from 'rxjs'
+import { CUSTOM_ELEMENTS_SCHEMA, ChangeDetectionStrategy, Component, OnDestroy, effect, inject, signal } from '@angular/core'
+import { Subscription, switchMap, timer } from 'rxjs'
 
 import { IssTrackerService } from '../../services/iss-tracker'
 import { IssPosition } from '../../interfaces/position.interface'
@@ -21,6 +21,12 @@ type MapView = {
 	// Usato per centrare la mappa su una posizione selezionata.
 	goTo?: (target: unknown, options?: unknown) => Promise<unknown>
 
+	// Usato per aprire il popup sul punto selezionato.
+	openPopup?: (options?: unknown) => Promise<void>
+
+	// Usato per chiudere il popup (es. hover cambia selezione).
+	closePopup?: () => Promise<void>
+
 	// Usato per intercettare click sulla mappa.
 	on?: (
 		eventName: string,
@@ -36,6 +42,7 @@ type MapView = {
   imports: [],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './map.html',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 
 export class MapComponent implements OnDestroy {
@@ -43,18 +50,80 @@ export class MapComponent implements OnDestroy {
   private readonly FETCH_INTERVAL_MS = 10 * 1000
 
   // Stato locale (derivato dallo store) usato per render e focus.
-  private positions: IssPosition[] = []
-  private selectedTimestamp: number | null = null
-  private graphics: MapGraphics | undefined
-  private view: MapView | undefined
+  private readonly positions = signal<IssPosition[]>([])
+  private readonly selectedTimestamp = signal<number | null>(null)
+  private readonly graphics = signal<MapGraphics | null>(null)
+  private readonly view = signal<MapView | null>(null)
+  private readonly graphicByTimestamp = signal<Map<number, unknown>>(new Map())
   private fetchSubscription: Subscription | undefined
-  private storeSubscription: Subscription | undefined
-  private selectionSubscription: Subscription | undefined
 
-  constructor (
-    private readonly issTrackerService: IssTrackerService,
-    private readonly positionStoreService: PositionStoreService,
-  ) {}
+  private readonly issTrackerService = inject(IssTrackerService)
+  private readonly positionStoreService = inject(PositionStoreService)
+
+  // Store → stato locale → render (mappa coerente con sidebar).
+  private readonly renderEffect = effect(() => {
+    const graphics = this.graphics()
+    if (!graphics) return
+
+    this.positions.set(this.positionStoreService.positions())
+    this.selectedTimestamp.set(this.positionStoreService.selectedTimestamp())
+
+    graphics.removeAll?.()
+
+    const newGraphics = this.positions().map((position, index) =>
+      this.toGraphic(position, index),
+    )
+
+    const byTimestamp = new Map<number, unknown>()
+    this.positions().forEach((position, index) => {
+      byTimestamp.set(position.timestamp, newGraphics[index])
+    })
+    this.graphicByTimestamp.set(byTimestamp)
+
+    if (graphics.addMany) {
+      graphics.addMany(newGraphics)
+      return
+    }
+
+    newGraphics.forEach((graphic) => graphics.add(graphic))
+  })
+
+  // Selezione → focus mappa
+  private readonly focusEffect = effect(() => {
+    const view = this.view()
+    if (!view) return
+
+    const timestamp = this.positionStoreService.selectedTimestamp()
+    if (!timestamp) {
+      view.closePopup?.().catch(() => {})
+      return
+    }
+    const intent = this.positionStoreService.selectionIntent()
+
+    const position = this.positionStoreService.positions().find((p) => p.timestamp === timestamp)
+    if (!position) return
+
+    const graphic = this.graphicByTimestamp().get(timestamp)
+
+    if (intent !== 'click') {
+      view.closePopup?.().catch(() => {})
+    }
+
+    view.goTo?.(
+      {
+        center: [position.longitude, position.latitude],
+      },
+      { animate: true },
+    ).then(() => {
+      if (intent !== 'click') return
+      if (!graphic) return
+
+      view.openPopup?.({
+        features: [graphic],
+        location: (graphic as { geometry?: unknown } | undefined)?.geometry,
+      })
+    }).catch(() => {})
+  })
 
   // Questo evento viene emesso dal web component ArcGIS quando la view è pronta.
   // Da qui iniziamo:
@@ -72,29 +141,49 @@ export class MapComponent implements OnDestroy {
 
     if (!graphics) return
 
-    this.graphics = graphics
-    this.view = view
+    this.graphics.set(graphics)
+    this.view.set(view ?? null)
     this.startFetching()
-    this.startRendering()
-    this.startSelectionFocus()
   }
 
   ngOnDestroy () {
     this.fetchSubscription?.unsubscribe()
-    this.storeSubscription?.unsubscribe()
-    this.selectionSubscription?.unsubscribe()
   }
 
   // Evento emesso dal web component quando clicchi sulla view.
   // Usiamo hitTest per capire se hai cliccato uno dei nostri punti
   // e aggiornare `positions.selected` (quindi anche la sidebar).
   arcgisViewClick (event: unknown) {
-    if (!this.view?.hitTest) return
+    const view = this.view()
+    if (!view?.hitTest) return
 
-    this.view.hitTest(event).then((hitTestResult) => {
+    view.hitTest(event).then((hitTestResult) => {
       const timestamp = this.getTimestampFromHitTest(hitTestResult)
-      this.positionStoreService.select(timestamp)
+      this.positionStoreService.select(timestamp, 'map')
     }).catch(() => {})
+  }
+
+  arcgisViewMouseWheel (event: unknown) {
+    // Disabilita lo zoom via rotella (ma lascia intatto il goTo programmatico).
+    const detail = (event as { detail?: { stopPropagation?: () => void } } | null)?.detail
+    detail?.stopPropagation?.()
+  }
+
+  arcgisViewDoubleClick (event: unknown) {
+    // Disabilita lo zoom su doppio click.
+    const detail = (event as { detail?: { stopPropagation?: () => void } } | null)?.detail
+    detail?.stopPropagation?.()
+  }
+
+  arcgisViewKeyDown (event: unknown) {
+    // Disabilita lo zoom da tastiera (+ / -).
+    const detail = (event as { detail?: { key?: string, stopPropagation?: () => void } } | null)?.detail
+    if (!detail) return
+
+    const key = detail.key
+    if (key !== '+' && key !== '-') return
+
+    detail.stopPropagation?.()
   }
 
   private startFetching () {
@@ -111,7 +200,7 @@ export class MapComponent implements OnDestroy {
   private getInitialDelayMs () {
     // Allineiamo il fetch al prossimo “slot” da 10 secondi basandoci
     // sull’ultimo timestamp persistito.
-    const latestTimestamp = this.positionStoreService.get()?.[0]?.timestamp
+    const latestTimestamp = this.positionStoreService.latestTimestamp()
     if (!latestTimestamp) return 0
 
     const nowSec = Math.floor(Date.now() / 1000)
@@ -129,42 +218,9 @@ export class MapComponent implements OnDestroy {
     return delaySec * 1000
   }
 
-  private startRendering () {
-    if (this.storeSubscription) return
-
-    // Ogni cambiamento nello store forza un rerender coerente:
-    // numero di card in sidebar === numero di punti sulla mappa.
-    this.storeSubscription = combineLatest([
-      this.positionStoreService.positions$,
-      this.positionStoreService.selectedTimestamp$,
-    ]).subscribe(([positions, selectedTimestamp]) => {
-      this.positions = positions
-      this.selectedTimestamp = selectedTimestamp
-      this.renderPositions()
-    })
-  }
-
-  private renderPositions () {
-    if (!this.graphics) return
-    this.graphics.removeAll?.()
-
-    // Per ogni entry nello store creiamo un Graphic “plain object”.
-    // Importante: non usiamo `new Graphic()` da @arcgis/core (evita mismatch classi).
-    const graphics = this.positions.map((position, index) =>
-      this.toGraphic(position, index),
-    )
-
-    if (this.graphics.addMany) {
-      this.graphics.addMany(graphics)
-      return
-    }
-
-    graphics.forEach((graphic) => this.graphics?.add(graphic))
-  }
-
   private toGraphic (position: IssPosition, index: number) {
     const isLatest = index === 0
-    const isSelected = this.selectedTimestamp === position.timestamp
+    const isSelected = this.selectedTimestamp() === position.timestamp
     const timestamp = new Date(position.timestamp * 1000).toLocaleString()
 
     return {
@@ -188,31 +244,9 @@ export class MapComponent implements OnDestroy {
       },
       popupTemplate: {
         title: '{name}',
-        content: 'Posizione della ISS al <br /> <b>' + timestamp + '</b>',
+        content: 'Posizione della International Space Station al <br /> <b>' + timestamp + '</b>',
       },
     }
-  }
-
-  private startSelectionFocus () {
-    if (this.selectionSubscription) return
-
-    // Quando la selezione cambia (es. click su card), centriamo la mappa sul punto.
-    this.selectionSubscription = this.positionStoreService.selectedTimestamp$.pipe(
-      distinctUntilChanged(),
-    ).subscribe((timestamp) => {
-      if (!timestamp) return
-
-      const position = this.positions.find((p) => p.timestamp === timestamp)
-      if (!position) return
-
-      this.view?.goTo?.(
-        {
-          center: [position.longitude, position.latitude],
-          zoom: 4,
-        },
-        { animate: true },
-      ).catch(() => {})
-    })
   }
 
   private getTimestampFromHitTest (hitTestResult: HitTestResult): number | null {

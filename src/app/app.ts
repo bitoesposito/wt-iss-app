@@ -1,12 +1,8 @@
-import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit, signal } from '@angular/core';
-
-// Services
-import { IssTrackerService } from './services/iss-tracker';
-import { IssPosition } from './interfaces/position.interface';
+import { ChangeDetectionStrategy, Component, CUSTOM_ELEMENTS_SCHEMA, signal } from '@angular/core'
 
 // Components
-import { SidebarComponent } from './components/sidebar-component/sidebar';
-import { MapComponent } from './components/map/map';
+import { SidebarComponent } from './components/sidebar/sidebar'
+import { MapComponent } from './components/map/map'
 
 @Component({
   selector: 'app-root',
@@ -16,12 +12,9 @@ import { MapComponent } from './components/map/map';
   ],
   templateUrl: './app.html',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 
 export class App {
-  constructor (
-    private readonly issTrackerService: IssTrackerService
-  ) {}
-
-  
+  protected readonly title = signal('iss-app')
 }

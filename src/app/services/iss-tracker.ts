@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core'
+import { Injectable, inject } from '@angular/core'
 import { HttpClient } from '@angular/common/http'
 import { map, Observable, tap } from 'rxjs'
 
@@ -12,10 +12,8 @@ import { PositionStoreService } from './position-store'
 export class IssTrackerService {
   private readonly ISS_ENDPOINT = 'http://api.open-notify.org/iss-now.json'
 
-  constructor(
-    private readonly http: HttpClient,
-    private readonly positionStoreService: PositionStoreService,
-  ) {}
+  private readonly http = inject(HttpClient)
+  private readonly positionStoreService = inject(PositionStoreService)
 
   fetchResponse(): Observable<IssResponse> {
     return this.http.get<IssResponse>(this.ISS_ENDPOINT)
@@ -28,7 +26,7 @@ export class IssTrackerService {
         longitude: Number(response.iss_position.longitude),
         timestamp: response.timestamp,
       })),
-      tap((position) => this.positionStoreService.add(position))
+      tap((position) => this.positionStoreService.add(position)),
     )
   }
 }

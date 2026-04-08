@@ -7,10 +7,10 @@
   </header>
 
   <div class="px-4 py-3 flex flex-col gap-2 overflow-y-auto h-full">
-    @if (isLoading) {
+    @if (isLoading()) {
       <p class="text-sm text-slate-400 select-none">Caricamento delle posizioni...</p>
     } @else {
-      @for (position of positions; track position.id) {
+      @for (position of positions(); track position.id) {
         <p-card
           [unstyled]="true"
           [pt]="{
@@ -19,6 +19,8 @@
           tabindex="0"
           role="button"
           [attr.aria-label]="'Seleziona posizione ' + position.date.toLocaleString()"
+          (mouseenter)="handleHoverPosition(position.id)"
+          (focus)="handleHoverPosition(position.id)"
           (click)="handleSelectPosition(position.id)"
           (keydown.enter)="handleSelectPosition(position.id)"
           (keydown.space)="handleSelectPosition(position.id)"
