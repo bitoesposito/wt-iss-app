@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms'
 import { CardModule } from 'primeng/card'
 import { SelectButtonModule } from 'primeng/selectbutton'
 import { CheckboxModule } from 'primeng/checkbox'
+import { ButtonModule } from 'primeng/button'
 
 // Interfaces
 import { Position } from '../../interfaces/position.interface'
@@ -14,11 +15,14 @@ import { Position } from '../../interfaces/position.interface'
 import { PositionStoreService } from '../../store/position-store'
 import { ViewMode, ViewModeStoreService } from '../../store/view-mode-store'
 import { SatellitesStoreService } from '../../store/satellites-store'
+import { TleSatellite } from '../../services/satellites-tle.service'
+import { SatellitesSceneControllerService } from '../../controller/satellites-scene-controller'
 
 @Component({
   selector: 'app-sidebar',
   imports: [
     CardModule,
+    ButtonModule,
     SelectButtonModule,
     CheckboxModule,
     FormsModule,
@@ -31,6 +35,7 @@ export class SidebarComponent {
   private readonly positionStoreService = inject(PositionStoreService)
   private readonly viewModeStoreService = inject(ViewModeStoreService)
   private readonly satellitesStoreService = inject(SatellitesStoreService)
+  private readonly satellitesSceneControllerService = inject(SatellitesSceneControllerService)
 
   readonly viewMode = this.viewModeStoreService.viewMode
   readonly viewModeOptions: Array<{ label: string, value: ViewMode }> = [
@@ -58,7 +63,7 @@ export class SidebarComponent {
   readonly isLoading = computed(() => this.positions().length === 0)
   private readonly CARD_BASE_CLASS =
     'border-1 border-slate-800 rounded-md p-3 bg-transparent hover:bg-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary'
-  private readonly CARD_SELECTED_CLASS = 'ring-2 ring-primary bg-slate-900'
+  private readonly CARD_SELECTED_CLASS = 'bg-slate-900'
 
   handleViewModeChange (mode: ViewMode) {
     this.viewModeStoreService.setViewMode(mode)
@@ -67,14 +72,48 @@ export class SidebarComponent {
     }
   }
 
-  handleSelectedSatellitesChange (nextSelected: unknown) {
-    if (!Array.isArray(nextSelected)) return
-    this.selectedSatellites.set(nextSelected as any)
+  isSatelliteSelected (sat: TleSatellite): boolean {
+    return this.satellitesStoreService.isSelected(sat.name)
+  }
+
+  handleSatelliteToggle (sat: TleSatellite, checked: unknown) {
+    if (typeof checked !== 'boolean') return
+    this.satellitesStoreService.setSelected(sat.name, checked)
+  }
+
+  handleFocusSatellite (sat: TleSatellite) {
+    if (!this.isSatelliteSelected(sat)) {
+      this.satellitesStoreService.setSelected(sat.name, true)
+    }
+
+    this.satellitesSceneControllerService.focusSatellite(sat)
+  }
+
+  handleSelectAllSatellites () {
+    this.satellitesStoreService.selectAll()
+  }
+
+  handleClearSatellitesSelection () {
+    this.satellitesStoreService.clearSelection()
   }
 
   handleHoverPosition (timestamp: number) {
     if (this.selectedTimestamp() === timestamp) return
     this.positionStoreService.select(timestamp, 'hover')
+  }
+
+  handleFocusIssPosition (timestamp: number, event?: Event) {
+    event?.stopPropagation?.()
+    event?.preventDefault?.()
+
+    const isSameSelection = this.selectedTimestamp() === timestamp
+    const isPinnedByClick = this.selectionIntent() === 'click'
+
+    if (isSameSelection && isPinnedByClick) {
+      this.positionStoreService.select(null)
+    }
+
+    this.positionStoreService.select(timestamp, 'click')
   }
 
   handleSelectPosition (timestamp: number) {

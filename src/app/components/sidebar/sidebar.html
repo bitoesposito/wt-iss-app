@@ -21,7 +21,7 @@
       <h1 class="text-base font-semibold leading-none mb-0">Mappa ISS</h1>
       <p class="mt-1 text-sm text-slate-400">Storico posizioni aggiornato ogni 10 secondi</p>
     } @else {
-      <h1 class="text-base font-semibold leading-none mb-0">Satelliti</h1>
+      <h1 class="text-base font-semibold leading-none mb-0">Mappa satelliti</h1>
       <p class="mt-1 text-sm text-slate-400">Visualizza i satelliti in orbita attorno alla Terra</p>
     }
   </header>
@@ -47,7 +47,6 @@
             (keydown.space)="handleSelectPosition(position.id)"
           >
             <div class="flex gap-2 items-center mb-1">
-              <i class="pi pi-map-marker mr-2"></i>
               <div class="flex flex-col w-1/2">
                 <p class="uppercase text-xs text-slate-400 leading-none">Latitudine:</p>
                 <p class="text-sm font-medium leading-none">{{ position.latitude.toFixed(6) }}</p>
@@ -77,22 +76,54 @@
           Seleziona i satelliti da visualizzare in 3D.
         </p>
 
+        <div class="mt-2 flex gap-2">
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            size="small"
+            class="w-1/2"
+            (click)="handleSelectAllSatellites()"
+          >
+            <span pButtonLabel>Seleziona tutti</span>
+          </button>
+          <button
+            pButton
+            type="button"
+            severity="secondary"
+            size="small"
+            class="w-1/2"
+            (click)="handleClearSatellitesSelection()"
+          >
+            <span pButtonLabel>Pulisci</span>
+          </button>
+        </div>
+
         <div class="mt-2 flex flex-col gap-2">
           @for (sat of satellites(); track sat.name) {
             <div class="flex items-center gap-2">
               <p-checkbox
                 [inputId]="'sat-' + sat.name"
                 name="satellites"
-                [value]="sat"
-                [ngModel]="selectedSatellites()"
-                (ngModelChange)="handleSelectedSatellitesChange($event)"
+                [binary]="true"
+                [ngModel]="isSatelliteSelected(sat)"
+                (ngModelChange)="handleSatelliteToggle(sat, $event)"
               />
               <label
-                class="text-sm text-slate-200 cursor-pointer select-none"
+                class="text-sm text-slate-200 cursor-pointer select-none flex-1 truncate"
                 [for]="'sat-' + sat.name"
               >
                 {{ sat.name }}
               </label>
+              <p-button
+                type="button"
+                variant="outlined"
+                severity="secondary"
+                size="small"
+                icon="pi pi-map-marker"
+                ariaLabel="Centra satellite"
+                (onClick)="handleFocusSatellite(sat)"
+              />
             </div>
           } @empty {
             <p class="text-sm text-slate-400 select-none">Nessun satellite disponibile</p>

@@ -2,20 +2,14 @@ import { CUSTOM_ELEMENTS_SCHEMA, ChangeDetectionStrategy, Component, OnDestroy, 
 
 import { ViewModeStoreService } from '../../store/view-mode-store'
 import { IssMapControllerService, IssMapView } from '../../controller/iss-map-controller'
-import { SatellitesSceneControllerService } from '../../controller/satellites-scene-controller'
+import { SatellitesSceneControllerService, SatellitesSceneElement } from '../../controller/satellites-scene-controller'
 
 type MapElement = {
 	graphics?: unknown
 	view?: IssMapView
 }
 
-type SceneElement = {
-	viewOnReady?: (callback?: () => void, errback?: (error: Error) => void) => Promise<void>
-	map?: { addMany?: (layers: unknown[]) => void }
-	constraints?: unknown
-	popup?: unknown
-	environment?: unknown
-}
+type SceneElement = SatellitesSceneElement
 
 @Component({
 	selector: 'app-map',

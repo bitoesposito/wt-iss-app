@@ -7,9 +7,9 @@ import { providePrimeNG } from 'primeng/config'
 import lara from '@primeuix/themes/lara'
 import { definePreset, palette } from '@primeuix/themes'
 
-const laraIndigo = definePreset(lara, {
+const laraSlate = definePreset(lara, {
   semantic: {
-    primary: palette('{indigo}'),
+    primary: palette('{slate}'),
   },
 })
 
@@ -20,7 +20,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     providePrimeNG({
       theme: {
-        preset: laraIndigo,
+        preset: laraSlate,
         options: {
           darkModeSelector: '.app-dark',
         },

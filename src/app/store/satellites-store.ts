@@ -7,15 +7,20 @@ import { SatellitesTleService, TleSatellite } from '../services/satellites-tle.s
 })
 export class SatellitesStoreService {
   private readonly tleService = inject(SatellitesTleService)
-  private readonly STORAGE_KEY = 'satellites.tle.stations.v1'
-  private readonly STORAGE_SELECTED_KEY = 'satellites.tle.selected.v1'
+  private readonly STORAGE_KEY = 'satellites.'
+  private readonly STORAGE_SELECTED_KEY = 'satellites.selected'
 
   readonly satellites = signal<TleSatellite[]>([])
   readonly isLoading = signal<boolean>(false)
   readonly loadError = signal<string | null>(null)
 
-  // Selezione multipla (PrimeNG checkbox multiple)
-  readonly selectedSatellites = signal<TleSatellite[]>([])
+  // Selezione (salvata per nome, più stabile del binding ad oggetti)
+  readonly selectedSatelliteNames = signal<string[]>([])
+
+  readonly selectedSatellites = computed(() => {
+    const selected = new Set(this.selectedSatelliteNames())
+    return this.satellites().filter((s) => selected.has(s.name))
+  })
 
   readonly selectedNoradIds = computed(() =>
     new Set(
@@ -29,7 +34,7 @@ export class SatellitesStoreService {
     const cached = this.readSatellitesFromSession()
     if (cached.length) {
       this.satellites.set(cached)
-      this.selectedSatellites.set(this.readSelectedFromSession(cached))
+      this.selectedSatelliteNames.set(this.readSelectedNamesFromSession(cached))
     }
 
     effect(() => {
@@ -37,8 +42,7 @@ export class SatellitesStoreService {
     })
 
     effect(() => {
-      const selectedNames = this.selectedSatellites().map((s) => s.name)
-      sessionStorage.setItem(this.STORAGE_SELECTED_KEY, JSON.stringify(selectedNames))
+      sessionStorage.setItem(this.STORAGE_SELECTED_KEY, JSON.stringify(this.selectedSatelliteNames()))
     })
   }
 
@@ -55,18 +59,38 @@ export class SatellitesStoreService {
       this.satellites.set(satellites)
 
       // Default UX: se non c'è già una selezione, preseleziona ISS se presente.
-      if (!this.selectedSatellites().length) {
+      if (!this.selectedSatelliteNames().length) {
         const iss = satellites.find((s) => s.name.toLowerCase().includes('iss'))
-        this.selectedSatellites.set(iss ? [iss] : [])
+        this.selectedSatelliteNames.set(iss ? [iss.name] : [])
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Errore nel fetch dei TLE'
       this.loadError.set(message)
       this.satellites.set([])
-      this.selectedSatellites.set([])
+      this.selectedSatelliteNames.set([])
     } finally {
       this.isLoading.set(false)
     }
+  }
+
+  selectAll (): void {
+    const allNames = this.satellites().map((s) => s.name)
+    this.selectedSatelliteNames.set(allNames)
+  }
+
+  clearSelection (): void {
+    this.selectedSatelliteNames.set([])
+  }
+
+  isSelected (name: string): boolean {
+    return this.selectedSatelliteNames().includes(name)
+  }
+
+  setSelected (name: string, isSelected: boolean) {
+    const current = new Set(this.selectedSatelliteNames())
+    if (isSelected) current.add(name)
+    else current.delete(name)
+    this.selectedSatelliteNames.set(Array.from(current))
   }
 
   private readSatellitesFromSession (): TleSatellite[] {
@@ -91,7 +115,7 @@ export class SatellitesStoreService {
     }
   }
 
-  private readSelectedFromSession (satellites: TleSatellite[]): TleSatellite[] {
+  private readSelectedNamesFromSession (satellites: TleSatellite[]): string[] {
     const raw = sessionStorage.getItem(this.STORAGE_SELECTED_KEY)
     if (!raw) return []
 
@@ -100,7 +124,8 @@ export class SatellitesStoreService {
       if (!Array.isArray(parsed)) return []
 
       const selectedNames = new Set(parsed.filter((v): v is string => typeof v === 'string'))
-      return satellites.filter((s) => selectedNames.has(s.name))
+      const knownNames = new Set(satellites.map((s) => s.name))
+      return Array.from(selectedNames).filter((name) => knownNames.has(name))
     } catch {
       return []
     }
