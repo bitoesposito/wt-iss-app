@@ -66,7 +66,39 @@
     </div>
   } @else {
     <section class="px-4 py-3 flex flex-col gap-2 overflow-y-auto h-full">
-      ...
+      @if (satellitesIsLoading()) {
+        <p class="text-sm text-slate-400 select-none">Caricamento satelliti...</p>
+      } @else if (satellitesLoadError()) {
+        <p class="text-sm text-red-300">
+          {{ satellitesLoadError() }}
+        </p>
+      } @else {
+        <p class="text-sm text-slate-300">
+          Seleziona i satelliti da visualizzare in 3D.
+        </p>
+
+        <div class="mt-2 flex flex-col gap-2">
+          @for (sat of satellites(); track sat.name) {
+            <div class="flex items-center gap-2">
+              <p-checkbox
+                [inputId]="'sat-' + sat.name"
+                name="satellites"
+                [value]="sat"
+                [ngModel]="selectedSatellites()"
+                (ngModelChange)="handleSelectedSatellitesChange($event)"
+              />
+              <label
+                class="text-sm text-slate-200 cursor-pointer select-none"
+                [for]="'sat-' + sat.name"
+              >
+                {{ sat.name }}
+              </label>
+            </div>
+          } @empty {
+            <p class="text-sm text-slate-400 select-none">Nessun satellite disponibile</p>
+          }
+        </div>
+      }
     </section>
   }
 </main>

@@ -1,24 +1,26 @@
 // Angular
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core'
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core'
 import { FormsModule } from '@angular/forms'
 
 // PrimeNG
 import { CardModule } from 'primeng/card'
 import { SelectButtonModule } from 'primeng/selectbutton'
+import { CheckboxModule } from 'primeng/checkbox'
 
 // Interfaces
 import { Position } from '../../interfaces/position.interface'
 
 // Services
-import { PositionStoreService } from '../../services/position-store'
-
-type ViewMode = 'iss' | 'satellites'
+import { PositionStoreService } from '../../store/position-store'
+import { ViewMode, ViewModeStoreService } from '../../store/view-mode-store'
+import { SatellitesStoreService } from '../../store/satellites-store'
 
 @Component({
   selector: 'app-sidebar',
   imports: [
     CardModule,
     SelectButtonModule,
+    CheckboxModule,
     FormsModule,
   ],
   templateUrl: './sidebar.html',
@@ -27,8 +29,10 @@ type ViewMode = 'iss' | 'satellites'
 
 export class SidebarComponent {
   private readonly positionStoreService = inject(PositionStoreService)
+  private readonly viewModeStoreService = inject(ViewModeStoreService)
+  private readonly satellitesStoreService = inject(SatellitesStoreService)
 
-  readonly viewMode = signal<ViewMode>('iss')
+  readonly viewMode = this.viewModeStoreService.viewMode
   readonly viewModeOptions: Array<{ label: string, value: ViewMode }> = [
     { label: 'ISS', value: 'iss' },
     { label: 'Satelliti', value: 'satellites' },
@@ -36,6 +40,10 @@ export class SidebarComponent {
 
   readonly selectedTimestamp = this.positionStoreService.selectedTimestamp
   readonly selectionIntent = this.positionStoreService.selectionIntent
+  readonly satellites = this.satellitesStoreService.satellites
+  readonly satellitesIsLoading = this.satellitesStoreService.isLoading
+  readonly satellitesLoadError = this.satellitesStoreService.loadError
+  readonly selectedSatellites = this.satellitesStoreService.selectedSatellites
 
   readonly positions = computed<Position[]>(() =>
     this.positionStoreService.positions().map((position) => ({
@@ -53,7 +61,15 @@ export class SidebarComponent {
   private readonly CARD_SELECTED_CLASS = 'ring-2 ring-primary bg-slate-900'
 
   handleViewModeChange (mode: ViewMode) {
-    this.viewMode.set(mode)
+    this.viewModeStoreService.setViewMode(mode)
+    if (mode === 'satellites') {
+      this.satellitesStoreService.loadStations()
+    }
+  }
+
+  handleSelectedSatellitesChange (nextSelected: unknown) {
+    if (!Array.isArray(nextSelected)) return
+    this.selectedSatellites.set(nextSelected as any)
   }
 
   handleHoverPosition (timestamp: number) {

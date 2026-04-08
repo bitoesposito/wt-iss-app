@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http'
 import { map, Observable, tap } from 'rxjs'
 
 import { IssPosition, IssResponse } from '../interfaces/position.interface'
-import { PositionStoreService } from './position-store'
+import { PositionStoreService } from '../store/position-store';
 
 @Injectable({
   providedIn: 'root',
