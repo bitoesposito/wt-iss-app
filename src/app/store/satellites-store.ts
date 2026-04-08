@@ -7,7 +7,7 @@ import { SatellitesTleService, TleSatellite } from '../services/satellites-tle.s
 })
 export class SatellitesStoreService {
   private readonly tleService = inject(SatellitesTleService)
-  private readonly STORAGE_KEY = 'satellites.'
+  private readonly STORAGE_KEY = 'satellites'
   private readonly STORAGE_SELECTED_KEY = 'satellites.selected'
 
   readonly satellites = signal<TleSatellite[]>([])

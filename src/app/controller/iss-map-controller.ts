@@ -1,7 +1,7 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
 import { Subscription, switchMap, timer } from 'rxjs';
 
-import { IssTrackerService } from '../services/iss-tracker';
+import { IssTrackerService } from '../services/iss-tracker.service';
 import { IssPosition } from '../interfaces/position.interface';
 import { PositionStoreService } from '../store/position-store';
 

@@ -8,16 +8,15 @@
     (arcgisViewDoubleClick)="arcgisViewDoubleClick($event)"
     (arcgisViewKeyDown)="arcgisViewKeyDown($event)"
     [wrapAround180]="true"
-  > 
-  </arcgis-map>
-}
-@else {
-  <arcgis-scene
-    basemap="dark-gray-vector"
-    (arcgisViewReadyChange)="arcgisSceneReadyChange($event)"
   >
+  </arcgis-map>
+} @else {
+  <arcgis-scene basemap="dark-gray-vector" (arcgisViewReadyChange)="arcgisSceneReadyChange($event)">
     <arcgis-zoom class="pb-3" slot="top-left"></arcgis-zoom>
     <arcgis-navigation-toggle class="pb-3" slot="top-left"></arcgis-navigation-toggle>
     <arcgis-compass slot="top-left"></arcgis-compass>
+    <arcgis-expand slot="top-right" [expandIcon]="'sky-plot'">
+      <arcgis-sketch [sketchIcon]="'sky-plot'"> </arcgis-sketch>
+    </arcgis-expand>
   </arcgis-scene>
 }
