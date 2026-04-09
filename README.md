@@ -1,73 +1,34 @@
-# React + TypeScript + Vite
+# ArcGIS Maps SDK for JavaScript Vite React 19 TSX template
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+📁 **[Click here to download this directory as a ZIP file](https://esri.github.io/jsapi-resources/zips/js-maps-sdk-react.zip)** 📁
 
-Currently, two official plugins are available:
+This template demonstrates how to use the [ArcGIS Maps SDK for JavaScript](https://developers.arcgis.com/javascript/latest/) in a Vite React 19 TSX application.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Get started
 
-## React Compiler
+To quickly scaffold a new application using this template, run the following command in your terminal:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npx @arcgis/create -n my-arcgis-app -t react
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+This template uses the following packages:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- [`@arcgis/core`](https://www.npmjs.com/package/@arcgis/core)
+- [`@arcgis/map-components`](https://www.npmjs.com/package/@arcgis/map-components)
+- [`@arcgis/charts-components`](https://www.npmjs.com/package/@arcgis/charts-components)
+- [`@esri/calcite-components`](https://www.npmjs.com/package/@esri/calcite-components)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## TypeScript
+
+This template is configured to use TypeScript. If you prefer to use JavaScript, you can:
+
+- Remove the `tsconfig.json` file
+- Update the file extensions from `.tsx` to `.jsx`
+- Remove the `vite.env.d.ts` file
+- Remove the `typescript` dependency from `package.json`
+- Remove the `@types/node`, `@types/react` and `@types/react-dom` dev dependencies from `package.json`
+
+## Resources
+
+See the [Get started with npm guide](https://developers.arcgis.com/javascript/latest/get-started/#use-arcgiscreate) for full instructions.
