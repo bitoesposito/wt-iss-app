@@ -4,6 +4,9 @@ import Graphic from '@arcgis/core/Graphic'
 import Point from '@arcgis/core/geometry/Point'
 import Polyline from '@arcgis/core/geometry/Polyline'
 import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer'
+import SpatialReference from '@arcgis/core/geometry/SpatialReference'
+import IconSymbol3DLayer from '@arcgis/core/symbols/IconSymbol3DLayer'
+import PointSymbol3D from '@arcgis/core/symbols/PointSymbol3D'
 import * as satellite from 'satellite.js'
 
 import type { TleSatellite } from '../types'
@@ -35,6 +38,7 @@ const getSatellitePointFromTle = (params: {
   }
 
   const positionAndVelocity = satellite.propagate(satrec, date)
+  if (!positionAndVelocity) return null
   const positionEci = positionAndVelocity.position
 
   if (
@@ -84,18 +88,16 @@ const createSatelliteGraphic = (params: {
   const { satellite: sat, point, timestamp } = params
   const timestampLabel = new Date(timestamp).toLocaleString()
 
-  const symbol = {
-    type: 'point-3d',
+  const symbol = new PointSymbol3D({
     symbolLayers: [
-      {
-        type: 'icon',
+      new IconSymbol3DLayer({
         resource: { primitive: 'circle' },
         size: 10,
         material: { color: [59, 130, 246, 0.9] },
         outline: { color: [255, 255, 255, 0.9], size: 1 },
-      },
+      }),
     ],
-  } as const
+  })
 
   const popupTemplate = {
     title: '{name}',
@@ -310,7 +312,7 @@ export default function useSatGraphicLayer({
 
       const polyline = new Polyline({
         paths: [points],
-        spatialReference: { wkid: 4326 } as unknown,
+        spatialReference: SpatialReference.WGS84,
       })
 
       const symbol = {

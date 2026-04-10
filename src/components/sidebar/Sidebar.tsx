@@ -146,11 +146,6 @@ function SatelliteSidebarComponent({
     );
   }, [query, satellitePositions]);
 
-  const selectedCount = selectedSatellites.length;
-  const isAllSelected =
-    satellitePositions.length > 0 &&
-    selectedCount === satellitePositions.length;
-
   const handleCenterSatellite = (
     satellitePosition: (typeof satellitePositions)[number],
   ) => {

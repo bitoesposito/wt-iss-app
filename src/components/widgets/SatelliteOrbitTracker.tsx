@@ -1,6 +1,3 @@
-// ArcGIS Widgets
-import Sketch from "@arcgis/core/widgets/Sketch.js";
-
 export default function SatelliteOrbitTrackerComponent() {
   return (
     <main className="p-3 select-none">
@@ -23,7 +20,7 @@ export default function SatelliteOrbitTrackerComponent() {
 
       <div className="flex flex-col gap-3">
         <calcite-input-number
-          step="1"
+          step={1}
           alignment="start"
           label-text="Area di interesse"
           name="buffer"
