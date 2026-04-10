@@ -2,7 +2,7 @@ import type { TleSatellite } from "../types";
 
 
 const SATELLITE_ENDPOINT =
-  "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle";
+  "https://celestrak.org/NORAD/elements/gp.php?GROUP=cubesat&FORMAT=tle";
 
 /**
  * Parses TLE text and returns an array of TleSatellite objects.

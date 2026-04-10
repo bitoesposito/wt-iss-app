@@ -59,9 +59,9 @@ const createGraphic = (params: {
 
   const popupTemplate = {
     title: isLatest ? 'Posizione attuale' : 'Posizione precedente',
-    content: `${position.latitude}, ${position.longitude}<br/>${new Date(
+    content: `Latitudine: <b>${position.latitude}</b><br/>Longitudine: <b>${position.longitude}</b><br/> Data: <b>${new Date(
       position.timestamp * 1000,
-    ).toLocaleString()}`
+    ).toLocaleString()}</b>`
   } as const
 
   return new Graphic({
@@ -175,6 +175,7 @@ export default function useIssGraphicLayer({
 
     maybe.constraints = {
       ...(maybe.constraints ?? {}),
+      minZoom: DEFAULT_ZOOM,
       maxZoom: DEFAULT_ZOOM,
     }
 

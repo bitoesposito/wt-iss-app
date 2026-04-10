@@ -1,3 +1,4 @@
+// Calcite Components
 import '@esri/calcite-components/components/calcite-action'
 import '@esri/calcite-components/components/calcite-block'
 import '@esri/calcite-components/components/calcite-checkbox'
@@ -16,4 +17,8 @@ import '@esri/calcite-components/components/calcite-segmented-control'
 import '@esri/calcite-components/components/calcite-segmented-control-item'
 import '@esri/calcite-components/components/calcite-shell'
 import '@esri/calcite-components/components/calcite-shell-panel'
-
+import "@arcgis/map-components/components/arcgis-sketch";
+import '@esri/calcite-components/components/calcite-input-number'
+import '@esri/calcite-components/components/calcite-input-date-picker'
+import '@esri/calcite-components/components/calcite-input-time-picker'
+import '@esri/calcite-components/components/calcite-button'

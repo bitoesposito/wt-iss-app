@@ -22,6 +22,7 @@ import { clearActiveSatelliteKey } from "../../store/satellite-slice";
 
 // React
 import { useCallback, useEffect, useRef } from "react";
+import SatelliteOrbitTrackerComponent from "../widgets/SatelliteOrbitTracker";
 
 export default function MapComponent() {
   const dispatch = useDispatch<AppDispatch>();
@@ -99,7 +100,7 @@ export default function MapComponent() {
             slot="top-right"
             expandIcon="sky-plot"
           >
-            test
+            <SatelliteOrbitTrackerComponent />
           </arcgis-expand>
         </arcgis-scene>
       )}
