@@ -20,6 +20,7 @@ export type TleSatellite = {
 
 export type SatelliteState = {
   positions: TleSatellite[]
+  selected: TleSatellite[]
 }
 
 export * from './arcgis-map'

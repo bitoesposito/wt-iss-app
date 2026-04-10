@@ -210,35 +210,97 @@ export default function useIssGraphicLayer({
     const latest = positions[0]
     if (!latest) return
 
-    const view = getArcgisViewFromElement(mapElement)
-    if (!view?.goTo) return
-
     const latestKey = getIssKey(latest)
     if (lastCenteredKeyRef.current === latestKey) return
-    lastCenteredKeyRef.current = latestKey
 
-    void view.goTo({
-      center: [latest.longitude, latest.latitude],
-      zoom: DEFAULT_ZOOM,
-    })
+    let isCancelled = false
+
+    const run = async () => {
+      while (!isCancelled && !getArcgisViewFromElement(mapElement)) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+
+      if (isCancelled) return
+
+      const view = getArcgisViewFromElement(mapElement)
+      if (!view?.goTo) return
+
+      try {
+        if (typeof (view as unknown as { when?: () => Promise<unknown> }).when === 'function') {
+          await (view as unknown as { when: () => Promise<unknown> }).when()
+        }
+      } catch {
+        return
+      }
+
+      try {
+        lastCenteredKeyRef.current = latestKey
+        await view.goTo(
+          {
+            center: [latest.longitude, latest.latitude],
+            zoom: DEFAULT_ZOOM,
+          },
+          { animate: false } as unknown,
+        )
+      } catch {
+        return
+      }
+    }
+
+    void run()
+
+    return () => {
+      isCancelled = true
+    }
   }, [activeKey, mapElement, positions])
 
   useEffect(() => {
     if (!mapElement) return
     if (!activeKey) return
 
-    const view = getArcgisViewFromElement(mapElement)
-    if (!view?.goTo) return
-
     if (lastActiveCenteredKeyRef.current === activeKey) return
-    lastActiveCenteredKeyRef.current = activeKey
 
     const graphic = graphicsByKeyRef.current.get(activeKey)
     if (!graphic) return
 
-    void view.goTo({
-      center: graphic.geometry,
-    })
+    let isCancelled = false
+
+    const run = async () => {
+      while (!isCancelled && !getArcgisViewFromElement(mapElement)) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+
+      if (isCancelled) return
+
+      const view = getArcgisViewFromElement(mapElement)
+      if (!view?.goTo) return
+
+      try {
+        if (typeof (view as unknown as { when?: () => Promise<unknown> }).when === 'function') {
+          await (view as unknown as { when: () => Promise<unknown> }).when()
+        }
+      } catch {
+        return
+      }
+
+      try {
+        lastActiveCenteredKeyRef.current = activeKey
+        await view.goTo(
+          {
+            center: graphic.geometry,
+          },
+          { animate: false } as unknown,
+        )
+      } catch {
+        return
+      }
+    }
+
+    void run()
+
+    return () => {
+      isCancelled = true
+    }
   }, [activeKey, mapElement])
 
   useEffect(() => {

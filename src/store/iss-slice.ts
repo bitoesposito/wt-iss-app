@@ -3,7 +3,7 @@ import type { PayloadAction } from '@reduxjs/toolkit'
 
 import type { IssPosition, IssState } from '../types'
 
-const MAX_ISS_POSITIONS = 20
+const MAX_ISS_POSITIONS = 40
 
 const initialState: IssState = {
   positions: [],
