@@ -153,10 +153,6 @@ export default function useIssGraphicLayer({
     }
 
     if (maybe.navigation) {
-      if (typeof maybe.navigation.mouseWheelZoomEnabled === 'boolean') {
-        maybe.navigation.mouseWheelZoomEnabled = false
-      }
-
       maybe.navigation.actionMap = {
         ...(maybe.navigation.actionMap ?? {}),
         mouseWheel: 'none',

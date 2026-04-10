@@ -2,7 +2,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { setActiveIssPositionKey } from "../../store/iss-slice";
 import type { AppDispatch, RootState } from "../../store";
 import { setViewMode } from "../../store/view-slice";
-import { setActiveSatelliteKey, setSelectedSatellites } from "../../store/satellite-slice";
+import {
+  setActiveSatelliteKey,
+  setSelectedSatellites,
+} from "../../store/satellite-slice";
 import { useMemo, useState } from "react";
 
 export default function SidebarComponent() {
@@ -178,23 +181,25 @@ function SatelliteSidebarComponent({
 
   // Seleziona tutti i satelliti caricati.
   const handleSelectAll = () => {
-    const trimmed = query.trim()
-    const satellitesToSelect = trimmed ? filteredSatellites : satellitePositions
+    const trimmed = query.trim();
+    const satellitesToSelect = trimmed
+      ? filteredSatellites
+      : satellitePositions;
 
     if (!trimmed) {
-      dispatch(setSelectedSatellites(satellitesToSelect))
-      return
+      dispatch(setSelectedSatellites(satellitesToSelect));
+      return;
     }
 
     const byKey = new Map(
       selectedSatellites.map((sat) => [getSatelliteKey(sat), sat]),
-    )
+    );
 
     for (const sat of satellitesToSelect) {
-      byKey.set(getSatelliteKey(sat), sat)
+      byKey.set(getSatelliteKey(sat), sat);
     }
 
-    dispatch(setSelectedSatellites([...byKey.values()]))
+    dispatch(setSelectedSatellites([...byKey.values()]));
   };
 
   // Pulisce tutta la selezione.
@@ -205,17 +210,19 @@ function SatelliteSidebarComponent({
   return (
     <calcite-list-item-group heading="MAPPA SATELLITI" className="h-full">
       <div>
-        <calcite-filter
+        <calcite-input-text
           placeholder="Filtra satelliti"
           value={query}
-          oncalciteFilterChange={(event: CustomEvent) => {
+          className="px-3"
+          oncalciteInputTextInput={(event: CustomEvent) => {
             const value = (event.target as unknown as { value?: string }).value;
             setQuery(value ?? "");
           }}
-        ></calcite-filter>
+        ></calcite-input-text>
 
-        <div className="flex items-center gap-2 px-3 pb-3 pt-1">
+        <div className="flex items-center gap-2 px-3 pb-3 pt-1 flex-wrap">
           <calcite-action
+            className="flex-1"
             icon="check-circle"
             text-enabled
             text="Seleziona tutti"
@@ -223,18 +230,22 @@ function SatelliteSidebarComponent({
             onClick={handleSelectAll}
           ></calcite-action>
           <calcite-action
+            className="flex-1"
             icon="trash"
             text-enabled
             text="Pulisci"
             scale="s"
             onClick={handleClearAll}
           ></calcite-action>
+          <p className="text-sm whitespace-nowrap w-full px-2">
+            {selectedSatellites.length}/{satellitePositions.length} satelliti
+          </p>
         </div>
       </div>
 
       <hr className="mx-3 mb-3" />
 
-      <div className="flex flex-col flex-1 max-h-[calc(100vh-12.8rem)] overflow-y-auto">
+      <div className="flex flex-col flex-1 max-h-[calc(100vh-15rem)] overflow-y-auto">
         {filteredSatellites.map((satellitePosition) => {
           const key = getSatelliteKey(satellitePosition);
           const isSelected = selectedKeySet.has(key);

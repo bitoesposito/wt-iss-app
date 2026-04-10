@@ -93,8 +93,8 @@ const createSatelliteGraphic = (params: {
       new IconSymbol3DLayer({
         resource: { primitive: 'circle' },
         size: 10,
-        material: { color: [59, 130, 246, 0.9] },
-        outline: { color: [255, 255, 255, 0.9], size: 1 },
+        material: { color: [59, 130, 246, 1] },
+        outline: { color: [255, 255, 255, 1], size: 1 },
       }),
     ],
   })
@@ -317,7 +317,7 @@ export default function useSatGraphicLayer({
 
       const symbol = {
         type: 'simple-line',
-        color: [255, 255, 255, 0.33],
+        color: [59, 130, 246, 0.33],
         width: 1.5,
       } as const
 
