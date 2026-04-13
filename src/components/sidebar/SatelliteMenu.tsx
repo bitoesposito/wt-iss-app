@@ -158,7 +158,7 @@ export default function SatelliteSidebarComponent({
 
       <hr className="mx-3 mb-3 shrink-0" />
 
-      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto md:max-h-[calc(100vh-15rem)]">
+      <main className="flex min-h-0 flex-1 flex-col overflow-y-auto md:max-h-[calc(100vh-12rem)]">
         {filteredSatellites.map((satellitePosition) => {
           const key = getSatelliteKey(satellitePosition);
           const isSelected = selectedKeySet.has(key);
