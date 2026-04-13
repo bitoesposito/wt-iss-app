@@ -1,34 +1,52 @@
-# ArcGIS Maps SDK for JavaScript Vite React 19 TSX template
+# WT ISS App
 
-📁 **[Click here to download this directory as a ZIP file](https://esri.github.io/jsapi-resources/zips/js-maps-sdk-react.zip)** 📁
+WT ISS App is a training project built to explore Esri ArcGIS APIs and Calcite components. The app tracks the position of the ISS and other satellites on an interactive map, with charts and widgets highlighting orbital passes and live data.
 
-This template demonstrates how to use the [ArcGIS Maps SDK for JavaScript](https://developers.arcgis.com/javascript/latest/) in a Vite React 19 TSX application.
+## Key Features
 
-## Get started
+- Tracks the International Space Station (ISS) position
+- Displays satellites in orbit and their flight paths
+- Uses `@arcgis/core`, `@arcgis/map-components`, and `@arcgis/charts-components`
+- UI built with `@esri/calcite-components`
+- Global state managed with Redux Toolkit
+- Implemented in React on the main branch (`main`)
+- Angular version available on the `angular` branch
+- Live deployment at: https://wt-iss-app.netlify.app
 
-To quickly scaffold a new application using this template, run the following command in your terminal:
+## Technologies
+
+- React 19
+- Vite
+- TypeScript
+- ArcGIS Maps SDK for JavaScript
+- ESRI Calcite Components
+- Redux Toolkit
+- Tailwind CSS
+- satellite.js
+
+## Repository Structure
+
+- `src/`: React app source code
+- `src/components/`: UI components and widgets
+- `src/hooks/`: custom hooks for map and orbit logic
+- `src/lib/`: utilities and calculations for ISS/satellite tracking
+- `src/store/`: Redux slices for app state
+- `src/types/`: TypeScript type definitions
+
+## Local Setup
 
 ```bash
-npx @arcgis/create -n my-arcgis-app -t react
+npm install
+npm run dev
 ```
 
-This template uses the following packages:
+Then open the URL shown by the Vite server (usually `http://localhost:5173`).
 
-- [`@arcgis/core`](https://www.npmjs.com/package/@arcgis/core)
-- [`@arcgis/map-components`](https://www.npmjs.com/package/@arcgis/map-components)
-- [`@arcgis/charts-components`](https://www.npmjs.com/package/@arcgis/charts-components)
-- [`@esri/calcite-components`](https://www.npmjs.com/package/@esri/calcite-components)
+## Branches
 
-## TypeScript
+- `main`: React version of the app
+- `angular`: Angular rewrite of the app
 
-This template is configured to use TypeScript. If you prefer to use JavaScript, you can:
+## Notes
 
-- Remove the `tsconfig.json` file
-- Update the file extensions from `.tsx` to `.jsx`
-- Remove the `vite.env.d.ts` file
-- Remove the `typescript` dependency from `package.json`
-- Remove the `@types/node`, `@types/react` and `@types/react-dom` dev dependencies from `package.json`
-
-## Resources
-
-See the [Get started with npm guide](https://developers.arcgis.com/javascript/latest/get-started/#use-arcgiscreate) for full instructions.
+This project is primarily intended as a practical exercise with Esri APIs and Calcite components, focusing on spatial data visualization and real-time satellite tracking.
