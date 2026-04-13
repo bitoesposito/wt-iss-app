@@ -98,6 +98,7 @@ export default function MapComponent() {
           <arcgis-expand
             className="pb-3"
             slot="top-right"
+            mode="drawer"
             expandIcon="sky-plot"
           >
             <SatelliteOrbitTrackerComponent />

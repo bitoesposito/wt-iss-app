@@ -64,7 +64,7 @@ export function App(): React.JSX.Element {
     <calcite-shell>
       <div id="mobile" className="md:hidden flex flex-col h-screen">
         <NavbarComponent />
-        <div className="h-[50vh] shrink-0 relative overflow-hidden">
+        <div className="h-[60dvh] shrink-0 relative overflow-hidden">
           <MapComponent />
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto border-t border-slate-200">
