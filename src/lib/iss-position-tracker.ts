@@ -15,10 +15,12 @@ export function fetchIssPosition() {
         timestamp: number
         latitude: number
         longitude: number
+        altitude: number
       } = await response.json();
 
       const latitude = data.latitude
       const longitude = data.longitude
+      const altitude = data.altitude
 
       if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
         return;
@@ -28,6 +30,7 @@ export function fetchIssPosition() {
         addIssPosition({
           latitude,
           longitude,
+          altitude: Number.isFinite(altitude) ? altitude : undefined,
           timestamp: data.timestamp,
         }),
       );

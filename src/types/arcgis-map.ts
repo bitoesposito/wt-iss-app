@@ -24,15 +24,40 @@ export type ArcgisMapElementLike = HTMLElement & {
 }
 
 export const getArcgisMapFromElement = (
-  mapElement: HTMLElement,
+  element: HTMLElement,
 ): ArcgisMapLike | null => {
-  const maybe = mapElement as unknown as ArcgisMapElementLike
-  return maybe.map ?? maybe.view?.map ?? null
+  const el = element as unknown as ArcgisMapElementLike
+  return el.map ?? el.view?.map ?? null
 }
 
 export const getArcgisViewFromElement = (
-  mapElement: HTMLElement,
+  element: HTMLElement,
 ): ArcgisViewLike | null => {
-  const maybe = mapElement as unknown as ArcgisMapElementLike
-  return maybe.view ?? null
+  const el = element as unknown as ArcgisMapElementLike
+  return el.view ?? null
+}
+
+export const waitForView = async (
+  element: HTMLElement,
+  isCancelled: () => boolean,
+): Promise<ArcgisViewLike | null> => {
+  while (!isCancelled() && !getArcgisViewFromElement(element)) {
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+
+  if (isCancelled()) return null
+
+  const view = getArcgisViewFromElement(element)
+  if (!view) return null
+
+  const maybeWhen = view as unknown as { when?: () => Promise<unknown> }
+  if (typeof maybeWhen.when === 'function') {
+    try {
+      await maybeWhen.when()
+    } catch {
+      return null
+    }
+  }
+
+  return view
 }

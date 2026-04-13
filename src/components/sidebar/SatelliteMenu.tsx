@@ -135,7 +135,7 @@ export default function SatelliteSidebarComponent({
             ></calcite-action>
           </div>
 
-          <div id="desktop-actions" className="hidden md:flex">
+          <div id="desktop-actions" className="hidden md:flex px-3 gap-1">
             <calcite-action
               className="flex-1"
               icon="check-circle"

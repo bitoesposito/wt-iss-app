@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import Graphic from '@arcgis/core/Graphic'
 import Point from '@arcgis/core/geometry/Point'
@@ -132,6 +132,7 @@ export default function useSatGraphicLayer({
 }: UseSatGraphicLayerParams) {
   const positionsLayerRef = useRef<GraphicsLayer | null>(null)
   const tracksLayerRef = useRef<GraphicsLayer | null>(null)
+  const [layerVersion, setLayerVersion] = useState(0)
 
   // 1) Crea e aggancia il layer alla mappa appena l’elemento ArcGIS è pronto.
   useEffect(() => {
@@ -160,6 +161,8 @@ export default function useSatGraphicLayer({
 
       tracksLayerRef.current = tracksLayer
       positionsLayerRef.current = positionsLayer
+
+      if (!isCancelled) setLayerVersion((v) => v + 1)
     }
 
     void ensureLayer()
@@ -213,7 +216,7 @@ export default function useSatGraphicLayer({
 
       positionsLayer.add(graphic)
     }
-  }, [positions])
+  }, [positions, layerVersion])
 
   useEffect(() => {
     if (!mapElement) return
@@ -262,7 +265,7 @@ export default function useSatGraphicLayer({
     return () => {
       isCancelled = true
     }
-  }, [activeSatelliteKey, mapElement, positions])
+  }, [activeSatelliteKey, mapElement, positions, layerVersion])
 
   useEffect(() => {
     const tracksLayer = tracksLayerRef.current
@@ -332,5 +335,5 @@ export default function useSatGraphicLayer({
         }),
       )
     }
-  }, [positions])
+  }, [positions, layerVersion])
 }
