@@ -1,0 +1,6 @@
+{
+  "fetchUrl": "https://api.wheretheiss.at/v1/satellites/25544",
+  "refreshInterval": 10000,
+  "maxPositionCount": 300,
+  "sceneWidgetId": ""
+}
