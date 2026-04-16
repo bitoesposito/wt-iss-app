@@ -1,7 +1,6 @@
 import type { ImmutableObject } from 'seamless-immutable'
 
 export interface Config {
-  fetchUrl: string
   channelId: string
 }
 

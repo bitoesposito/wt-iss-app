@@ -3,6 +3,9 @@ import { jsx, type AllWidgetProps } from 'jimu-core'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { type JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 
+import '@esri/calcite-components/components/calcite-notice'
+import '@esri/calcite-components/components/calcite-loader'
+
 import type { IMConfig } from '../config'
 import type { TleSatellite } from '../types'
 import { getSatelliteKey } from '../types'
@@ -29,7 +32,18 @@ export default function Widget(props: AllWidgetProps<IMConfig>) {
 
   useEffect(() => {
     selectedKeySetRef.current = new Set(selectedSatellites.map(getSatelliteKey))
-  }, [selectedSatellites])
+
+    const channelId = config?.channelId
+    if (!channelId) return
+
+    const channelKey = `__sat_channel_${channelId}`
+    ;(window as any)[channelKey] = selectedSatellites
+    window.dispatchEvent(
+      new CustomEvent('satellite-selection-changed', {
+        detail: { channelId, satellites: selectedSatellites },
+      })
+    )
+  }, [selectedSatellites, config?.channelId])
 
   useEffect(() => {
     const fetchUrl = config?.fetchUrl
@@ -118,7 +132,15 @@ export default function Widget(props: AllWidgetProps<IMConfig>) {
   )
 
   return (
-    <div className='w-100 h-100 d-flex flex-column'>
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
       {mapWidgetId && (
         <JimuMapViewComponent
           useMapWidgetId={mapWidgetId}
@@ -127,14 +149,31 @@ export default function Widget(props: AllWidgetProps<IMConfig>) {
       )}
 
       {loading && (
-        <div className='p-3 text-center text-muted'>
-          {t.loadingSatellites}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            padding: '32px 16px',
+            flex: 1,
+          }}
+        >
+          <calcite-loader scale='s' label={t.loadingSatellites} />
+          <span style={{ fontSize: '0.8rem', color: 'var(--calcite-color-text-3, #999)' }}>
+            {t.loadingSatellites}
+          </span>
         </div>
       )}
 
       {error && (
-        <div className='p-3 text-center' style={{ color: 'var(--sys-color-error, #d32f2f)' }}>
-          {t.fetchUrlError.replace('{status}', error.toString()) ?? t.fetchUrlError}
+        <div style={{ padding: '12px' }}>
+          <calcite-notice open kind='danger' scale='s' width='full' icon='exclamation-mark-triangle'>
+            <span slot='message'>
+              {t.fetchUrlError.replace('{status}', error.toString())}
+            </span>
+          </calcite-notice>
         </div>
       )}
 
@@ -150,14 +189,18 @@ export default function Widget(props: AllWidgetProps<IMConfig>) {
       )}
 
       {!loading && !error && allSatellites.length === 0 && !config?.fetchUrl && (
-        <div className='p-3 text-center text-muted'>
-          {t.noSatellitesConfigured}
+        <div style={{ padding: '12px' }}>
+          <calcite-notice open kind='info' scale='s' width='full' icon='information'>
+            <span slot='message'>{t.noSatellitesConfigured}</span>
+          </calcite-notice>
         </div>
       )}
 
       {!mapWidgetId && (
-        <div className='p-2 text-center text-muted' style={{ fontSize: '0.75rem' }}>
-          {t.noMapSelected}
+        <div style={{ padding: '12px' }}>
+          <calcite-notice open kind='warning' scale='s' width='full' icon='exclamation-mark-triangle'>
+            <span slot='message'>{t.noMapSelected}</span>
+          </calcite-notice>
         </div>
       )}
     </div>

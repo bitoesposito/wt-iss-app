@@ -1,18 +1,32 @@
-import { useMemo, useState } from "react";
-import type { TleSatellite } from "../types";
-import { getSatelliteKey } from "../types";
+import { useMemo, useState } from 'react'
+import type { TleSatellite } from '../types'
+import { getSatelliteKey } from '../types'
+import t from '../runtime/translations/default'
 
-import "@esri/calcite-components/components/calcite-input-text";
-import "@esri/calcite-components/components/calcite-checkbox";
-import "@esri/calcite-components/components/calcite-button";
+import '@esri/calcite-components/components/calcite-input-text'
+import '@esri/calcite-components/components/calcite-checkbox'
+import '@esri/calcite-components/components/calcite-button'
+import '@esri/calcite-components/components/calcite-icon'
 
 interface SatelliteSidebarProps {
-  allSatellites: TleSatellite[];
-  selectedSatellites: TleSatellite[];
-  onToggleSatellite: (sat: TleSatellite) => void;
-  onSelectAll: (satellites: TleSatellite[]) => void;
-  onClearAll: () => void;
-  onCenterSatellite: (sat: TleSatellite) => void;
+  allSatellites: TleSatellite[]
+  selectedSatellites: TleSatellite[]
+  onToggleSatellite: (sat: TleSatellite) => void
+  onSelectAll: (satellites: TleSatellite[]) => void
+  onClearAll: () => void
+  onCenterSatellite: (sat: TleSatellite) => void
+}
+
+const ROW_BASE: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  padding: '6px 8px',
+  borderRadius: '4px',
+  marginBottom: '2px',
+  cursor: 'pointer',
+  transition: 'background-color 120ms ease',
+  userSelect: 'none',
 }
 
 export default function SatelliteSidebar({
@@ -23,147 +37,217 @@ export default function SatelliteSidebar({
   onClearAll,
   onCenterSatellite,
 }: SatelliteSidebarProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('')
 
   const selectedKeySet = useMemo(
     () => new Set(selectedSatellites.map(getSatelliteKey)),
-    [selectedSatellites],
-  );
+    [selectedSatellites]
+  )
 
   const filteredSatellites = useMemo(() => {
-    const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return allSatellites;
+    const trimmed = query.trim().toLowerCase()
+    if (!trimmed) return allSatellites
     return allSatellites.filter((sat) =>
-      sat.name.toLowerCase().includes(trimmed),
-    );
-  }, [query, allSatellites]);
+      sat.name.toLowerCase().includes(trimmed)
+    )
+  }, [query, allSatellites])
 
   const handleSelectAll = () => {
-    const trimmed = query.trim();
+    const trimmed = query.trim()
 
     if (!trimmed) {
-      onSelectAll(allSatellites);
-      return;
+      onSelectAll(allSatellites)
+      return
     }
 
     const byKey = new Map(
-      selectedSatellites.map((sat) => [getSatelliteKey(sat), sat]),
-    );
+      selectedSatellites.map((sat) => [getSatelliteKey(sat), sat])
+    )
     for (const sat of filteredSatellites) {
-      byKey.set(getSatelliteKey(sat), sat);
+      byKey.set(getSatelliteKey(sat), sat)
     }
-    onSelectAll([...byKey.values()]);
-  };
+    onSelectAll([...byKey.values()])
+  }
 
   return (
-    <div className="d-flex flex-column h-100">
-      <div className="px-3 pt-2 pb-1">
-        <div className="d-flex justify-content-between align-items-center mb-2">
+    <div
+      style={{
+        height: '100%',
+        minHeight: 0,
+      }}
+    >
+      {/* Header */}
+      <div style={{ padding: '12px 12px 0' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            marginBottom: '8px',
+          }}
+        >
           <span
-            className="font-weight-bold text-uppercase"
-            style={{ fontSize: "0.8rem", letterSpacing: "0.05em" }}
+            style={{
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+            }}
           >
-            Satellite Map
+            {t.sidebarTitle}
           </span>
-          <span className="text-disabled" style={{ fontSize: "0.75rem" }}>
+          <span
+            style={{
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              padding: '2px 8px',
+              borderRadius: '10px',
+              backgroundColor: 'var(--calcite-color-foreground-2, #f3f3f3)',
+              color: 'var(--calcite-color-text-2, #6a6a6a)',
+            }}
+          >
             {selectedSatellites.length}/{allSatellites.length}
           </span>
         </div>
 
         <calcite-input-text
-          className="mb-2"
           clearable
-          icon="search"
-          label="Filter satellites"
-          placeholder="Filter satellites..."
+          icon='search'
+          scale='s'
+          label={t.filterSatellitesLabel}
+          placeholder={t.filterSatellitesPlaceholder}
           value={query}
           oncalciteInputTextInput={(event: CustomEvent) => {
-            const value = (event.target as unknown as { value?: string }).value;
-            setQuery(value ?? "");
+            const value = (event.target as unknown as { value?: string }).value
+            setQuery(value ?? '')
           }}
         />
 
-        <div className="d-flex gap-1 mb-2">
+        <div style={{ display: 'flex', gap: '4px', marginTop: '8px', marginBottom: '8px' }}>
           <calcite-button
-            className="btn btn-sm btn-outline-primary flex-fill"
-            appearance="outline"
-            kind="brand"
-            scale="s"
-            onClick={() => {
-              handleSelectAll();
-            }}
-            label="Select all satellites"
+            appearance='outline'
+            kind='brand'
+            scale='s'
+            width='half'
+            icon-start='check-circle'
+            onClick={() => handleSelectAll()}
+            label={t.selectAllLabel}
           >
-            Select All
+            {t.selectAll}
           </calcite-button>
           <calcite-button
-            className="btn btn-sm btn-outline-secondary flex-fill"
-            appearance="outline"
-            kind="neutral"
-            scale="s"
-            onClick={() => {
-              onClearAll();
-            }}
-            disabled={selectedSatellites.length === 0}
-            label="Clear selected satellites"
+            appearance='outline'
+            kind='neutral'
+            scale='s'
+            width='half'
+            icon-start='reset'
+            onClick={() => onClearAll()}
+            disabled={selectedSatellites.length === 0 || undefined}
+            label={t.clearLabel}
           >
-            Clear
+            {t.clear}
           </calcite-button>
         </div>
       </div>
 
-      <hr className="mx-3 my-0" />
+      <hr style={{ margin: '0 12px', border: 'none', borderTop: '1px solid var(--calcite-color-border-3, #eaeaea)' }} />
 
+      {/* Satellite list */}
       <div
-        className="flex flex-col flex-fill px-3 pt-2"
-        style={{ overflowY: "auto", height: "100%", minHeight: 0 }}
+        role='listbox'
+        aria-label={t.sidebarTitle}
+        style={{
+          flex: '1 1 0',
+          overflowY: 'auto',
+          padding: '8px 8px 12px',
+          minHeight: 0,
+        }}
       >
         {filteredSatellites.map((sat) => {
-          const key = getSatelliteKey(sat);
-          const isSelected = selectedKeySet.has(key);
+          const key = getSatelliteKey(sat)
+          const isSelected = selectedKeySet.has(key)
 
           return (
-            <div key={key} className="flex items-center py-1">
+            <div
+              key={key}
+              role='option'
+              aria-selected={isSelected}
+              style={{
+                ...ROW_BASE,
+                backgroundColor: isSelected
+                  ? 'var(--calcite-color-foreground-2, #f3f3f3)'
+                  : 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!isSelected) {
+                  ;(e.currentTarget as HTMLElement).style.backgroundColor =
+                    'var(--calcite-color-foreground-2, #f8f8f8)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                ;(e.currentTarget as HTMLElement).style.backgroundColor = isSelected
+                  ? 'var(--calcite-color-foreground-2, #f3f3f3)'
+                  : 'transparent'
+              }}
+            >
               <calcite-checkbox
-                checked={isSelected}
-                label={`Select ${sat.name}`}
-                oncalciteCheckboxChange={() => {
-                  onToggleSatellite(sat);
-                }}
-                className="mr-2"
+                checked={isSelected || undefined}
+                scale='s'
+                label={t.selectSatelliteLabel.replace('{name}', sat.name)}
+                oncalciteCheckboxChange={() => onToggleSatellite(sat)}
               />
               <span
-                className="text-truncate flex-fill"
-                style={{ cursor: "pointer" }}
-                title={sat.name}
-                role="button"
-                tabIndex={0}
-                aria-label={`Center on ${sat.name}`}
-                onClick={() => {
-                  onCenterSatellite(sat);
+                style={{
+                  flex: '1 1 0',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontSize: '0.8rem',
+                  fontWeight: isSelected ? 600 : 400,
+                  color: isSelected
+                    ? 'var(--calcite-color-text-1, #151515)'
+                    : 'var(--calcite-color-text-2, #6a6a6a)',
+                  lineHeight: 1.4,
                 }}
+                title={sat.name}
+                role='button'
+                tabIndex={0}
+                aria-label={t.centerOnSatelliteAriaLabel.replace('{name}', sat.name)}
+                onClick={() => onCenterSatellite(sat)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onCenterSatellite(sat);
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onCenterSatellite(sat)
                   }
                 }}
               >
                 {sat.name}
               </span>
+              {isSelected && (
+                <calcite-icon
+                  icon='gps-on'
+                  scale='s'
+                  style={{ cursor: 'pointer', flexShrink: 0, opacity: 0.5 }}
+                  onClick={() => onCenterSatellite(sat)}
+                />
+              )}
             </div>
-          );
+          )
         })}
 
         {filteredSatellites.length === 0 && (
           <div
-            className="text-disabled text-center py-3"
-            style={{ fontSize: "0.8rem" }}
+            style={{
+              textAlign: 'center',
+              padding: '24px 12px',
+              fontSize: '0.8rem',
+              color: 'var(--calcite-color-text-3, #999)',
+            }}
           >
-            No satellites found
+            {t.noSatellitesFound}
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }

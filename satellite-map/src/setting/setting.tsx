@@ -23,6 +23,13 @@ export default function Setting(props: AllWidgetSettingProps<IMConfig>) {
     });
   };
 
+  const handleChannelIdChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    props.onSettingChange({
+      id: props.id,
+      config: props.config.set("channelId", event.target.value),
+    });
+  };
+
   return (
     <>
       <SettingSection
@@ -56,6 +63,34 @@ export default function Setting(props: AllWidgetSettingProps<IMConfig>) {
             })}
             onChange={handleFetchUrlChange}
           />
+        </SettingRow>
+      </SettingSection>
+
+      <SettingSection
+        title={props.intl.formatMessage({
+          id: "channelIdLabel",
+          defaultMessage: defaultI18nMessages.channelIdLabel,
+        })}
+      >
+        <SettingRow>
+          <TextInput
+            id="channelIdInput"
+            className="w-100"
+            value={props.config.channelId ?? ""}
+            placeholder={props.intl.formatMessage({
+              id: "channelIdPlaceholder",
+              defaultMessage: defaultI18nMessages.channelIdPlaceholder,
+            })}
+            onChange={handleChannelIdChange}
+          />
+        </SettingRow>
+        <SettingRow>
+          <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>
+            {props.intl.formatMessage({
+              id: "channelIdDescription",
+              defaultMessage: defaultI18nMessages.channelIdDescription,
+            })}
+          </span>
         </SettingRow>
       </SettingSection>
     </>

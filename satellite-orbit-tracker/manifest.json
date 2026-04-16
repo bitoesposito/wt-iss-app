@@ -1,0 +1,18 @@
+{
+  "name": "satellite-orbit-tracker",
+  "label": "Satellite Orbit Tracker",
+  "type": "widget",
+  "version": "1.20.0",
+  "exbVersion": "1.20.0",
+  "dependency": ["jimu-arcgis"],
+  "author": "Vito Esposito",
+  "description": "Calculates satellite passes over a user-defined area of interest using TLE data from the Satellite Map widget.",
+  "copyright": "",
+  "license": "http://www.apache.org/licenses/LICENSE-2.0",
+  "properties": {},
+  "translatedLocales": ["en"],
+  "defaultSize": {
+    "width": 360,
+    "height": 560
+  }
+}
