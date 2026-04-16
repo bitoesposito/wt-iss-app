@@ -1,0 +1,18 @@
+{
+  "name": "satellite-map",
+  "label": "Satellite Map",
+  "type": "widget",
+  "version": "1.20.0",
+  "exbVersion": "1.20.0",
+  "dependency": ["jimu-arcgis"],
+  "author": "Vito Esposito",
+  "description": "Fetches CubeSat TLE data from CelesTrak, lists satellites with selection, and renders positions and orbital tracks on a map.",
+  "copyright": "",
+  "license": "http://www.apache.org/licenses/LICENSE-2.0",
+  "properties": {},
+  "translatedLocales": ["en"],
+  "defaultSize": {
+    "width": 350,
+    "height": 500
+  }
+}
