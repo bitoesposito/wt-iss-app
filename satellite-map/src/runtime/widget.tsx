@@ -1,24 +1,62 @@
 /** @jsx jsx */
 import { jsx, type AllWidgetProps } from 'jimu-core'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { type JimuMapView, JimuMapViewComponent } from 'jimu-arcgis'
 
 import '@esri/calcite-components/components/calcite-notice'
 import '@esri/calcite-components/components/calcite-loader'
 
+import {
+  getSatelliteKey,
+  publishSelection,
+  type TleSatellite,
+} from 'widgets/shared-code/satellite-core'
+
 import type { IMConfig } from '../config'
-import type { TleSatellite } from '../types'
-import { getSatelliteKey } from '../types'
 import { fetchSatellitesTle } from '../services/tle-service'
 import useSatGraphicLayer from '../hooks/use-sat-graphic-layer'
 import SatelliteSidebar from '../components/satellite-sidebar'
 import t from './translations/default'
 
-const REFRESH_INTERVAL_MS = 10_000
+/**
+ * Interval at which satellite positions are refreshed on the map. Tracks
+ * are not refreshed on this cadence to avoid useless recomputation.
+ */
+const POSITION_REFRESH_INTERVAL_MS = 10_000
 
-export default function Widget(props: AllWidgetProps<IMConfig>) {
+const styles = {
+  root: {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    overflow: 'hidden',
+  },
+  loading: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 32,
+    flex: 1,
+  },
+  loadingLabel: { fontSize: 12, opacity: 0.7 },
+  noticeWrapper: { padding: 12 },
+} as const
+
+/**
+ * Satellite Map widget: downloads a TLE catalog, exposes a filterable
+ * list for selection, and renders both current positions and 90-minute
+ * orbital tracks for the current selection on an Experience Builder map.
+ *
+ * The selection is optionally published on a user-defined channel so the
+ * Orbit Tracker widget can reuse it without forcing a global singleton.
+ */
+export default function Widget(props: AllWidgetProps<IMConfig>): React.ReactElement {
   const { config, useMapWidgetIds } = props
   const mapWidgetId = useMapWidgetIds?.[0]
+  const channelId = config?.channelId
 
   const [jimuMapView, setJimuMapView] = useState<JimuMapView | null>(null)
   const [allSatellites, setAllSatellites] = useState<TleSatellite[]>([])
@@ -28,55 +66,53 @@ export default function Widget(props: AllWidgetProps<IMConfig>) {
   const [error, setError] = useState<string | null>(null)
   const [tick, setTick] = useState(0)
 
+  /**
+   * Keep a ref mirror of the selection keys so toggle handlers can
+   * decide based on a fresh value without recreating callbacks on
+   * every selection change.
+   */
   const selectedKeySetRef = useRef(new Set<string>())
-
   useEffect(() => {
     selectedKeySetRef.current = new Set(selectedSatellites.map(getSatelliteKey))
+  }, [selectedSatellites])
 
-    const channelId = config?.channelId
-    if (!channelId) return
-
-    const channelKey = `__sat_channel_${channelId}`
-    ;(window as any)[channelKey] = selectedSatellites
-    window.dispatchEvent(
-      new CustomEvent('satellite-selection-changed', {
-        detail: { channelId, satellites: selectedSatellites },
-      })
-    )
-  }, [selectedSatellites, config?.channelId])
+  useEffect(() => {
+    publishSelection(channelId, selectedSatellites)
+  }, [selectedSatellites, channelId])
 
   useEffect(() => {
     const fetchUrl = config?.fetchUrl
     if (!fetchUrl) return
 
+    const controller = new AbortController()
     let cancelled = false
 
-    const load = async () => {
-      setLoading(true)
-      setError(null)
+    setLoading(true)
+    setError(null)
+    ;(async () => {
       try {
-        const satellites = await fetchSatellitesTle(fetchUrl)
+        const satellites = await fetchSatellitesTle(fetchUrl, controller.signal)
         if (!cancelled) setAllSatellites(satellites)
       } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Fetch failed')
-        }
+        if (cancelled || controller.signal.aborted) return
+        setError(err instanceof Error ? err.message : t.fetchUrlGenericError)
       } finally {
         if (!cancelled) setLoading(false)
       }
-    }
-
-    void load()
+    })()
 
     return () => {
       cancelled = true
+      controller.abort()
     }
   }, [config?.fetchUrl])
 
   useEffect(() => {
     if (selectedSatellites.length === 0) return
-
-    const id = window.setInterval(() => setTick((t) => t + 1), REFRESH_INTERVAL_MS)
+    const id = window.setInterval(
+      () => setTick((n) => n + 1),
+      POSITION_REFRESH_INTERVAL_MS,
+    )
     return () => window.clearInterval(id)
   }, [selectedSatellites.length])
 
@@ -92,23 +128,15 @@ export default function Widget(props: AllWidgetProps<IMConfig>) {
     jmv.whenJimuMapViewLoaded().then(() => setJimuMapView(jmv))
   }, [])
 
-  const handleToggleSatellite = useCallback(
-    (sat: TleSatellite) => {
-      const key = getSatelliteKey(sat)
-      const isSelected = selectedKeySetRef.current.has(key)
-
-      if (isSelected) {
-        setSelectedSatellites((prev) =>
-          prev.filter((s) => getSatelliteKey(s) !== key)
-        )
-        return
-      }
-
-      setActiveSatelliteKey(key)
-      setSelectedSatellites((prev) => [...prev, sat])
-    },
-    []
-  )
+  const handleToggleSatellite = useCallback((sat: TleSatellite) => {
+    const key = getSatelliteKey(sat)
+    if (selectedKeySetRef.current.has(key)) {
+      setSelectedSatellites((prev) => prev.filter((s) => getSatelliteKey(s) !== key))
+      return
+    }
+    setActiveSatelliteKey(key)
+    setSelectedSatellites((prev) => [...prev, sat])
+  }, [])
 
   const handleSelectAll = useCallback((satellites: TleSatellite[]) => {
     setSelectedSatellites(satellites)
@@ -119,28 +147,21 @@ export default function Widget(props: AllWidgetProps<IMConfig>) {
     setActiveSatelliteKey(null)
   }, [])
 
-  const handleCenterSatellite = useCallback(
-    (sat: TleSatellite) => {
-      const key = getSatelliteKey(sat)
-      setActiveSatelliteKey(key)
+  const handleCenterSatellite = useCallback((sat: TleSatellite) => {
+    const key = getSatelliteKey(sat)
+    setActiveSatelliteKey(key)
+    if (!selectedKeySetRef.current.has(key)) {
+      setSelectedSatellites((prev) => [...prev, sat])
+    }
+  }, [])
 
-      if (!selectedKeySetRef.current.has(key)) {
-        setSelectedSatellites((prev) => [...prev, sat])
-      }
-    },
-    []
-  )
+  const errorMessage = useMemo(() => {
+    if (!error) return null
+    return t.fetchUrlError.replace('{status}', error)
+  }, [error])
 
   return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
+    <div className='jimu-widget' style={styles.root}>
       {mapWidgetId && (
         <JimuMapViewComponent
           useMapWidgetId={mapWidgetId}
@@ -149,35 +170,21 @@ export default function Widget(props: AllWidgetProps<IMConfig>) {
       )}
 
       {loading && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-            padding: '32px 16px',
-            flex: 1,
-          }}
-        >
+        <div style={styles.loading}>
           <calcite-loader scale='s' label={t.loadingSatellites} />
-          <span style={{ fontSize: '0.8rem', color: 'var(--calcite-color-text-3, #999)' }}>
-            {t.loadingSatellites}
-          </span>
+          <span style={styles.loadingLabel}>{t.loadingSatellites}</span>
         </div>
       )}
 
-      {error && (
-        <div style={{ padding: '12px' }}>
+      {errorMessage && (
+        <div style={styles.noticeWrapper}>
           <calcite-notice open kind='danger' scale='s' width='full' icon='exclamation-mark-triangle'>
-            <span slot='message'>
-              {t.fetchUrlError.replace('{status}', error.toString())}
-            </span>
+            <span slot='message'>{errorMessage}</span>
           </calcite-notice>
         </div>
       )}
 
-      {!loading && !error && allSatellites.length > 0 && (
+      {!loading && !errorMessage && allSatellites.length > 0 && (
         <SatelliteSidebar
           allSatellites={allSatellites}
           selectedSatellites={selectedSatellites}
@@ -188,8 +195,8 @@ export default function Widget(props: AllWidgetProps<IMConfig>) {
         />
       )}
 
-      {!loading && !error && allSatellites.length === 0 && !config?.fetchUrl && (
-        <div style={{ padding: '12px' }}>
+      {!loading && !errorMessage && allSatellites.length === 0 && !config?.fetchUrl && (
+        <div style={styles.noticeWrapper}>
           <calcite-notice open kind='info' scale='s' width='full' icon='information'>
             <span slot='message'>{t.noSatellitesConfigured}</span>
           </calcite-notice>
@@ -197,7 +204,7 @@ export default function Widget(props: AllWidgetProps<IMConfig>) {
       )}
 
       {!mapWidgetId && (
-        <div style={{ padding: '12px' }}>
+        <div style={styles.noticeWrapper}>
           <calcite-notice open kind='warning' scale='s' width='full' icon='exclamation-mark-triangle'>
             <span slot='message'>{t.noMapSelected}</span>
           </calcite-notice>

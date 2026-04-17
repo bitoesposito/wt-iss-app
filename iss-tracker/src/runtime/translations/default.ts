@@ -1,7 +1,17 @@
 export default {
-  _widgetLabel: 'Get Map Coordinates (Function)',
+  _widgetLabel: 'ISS Tracker',
+  title: 'ISS Tracker',
+  samples: 'Samples',
+  fetching: 'fetching...',
   clear: 'Clear',
-  latLon: 'Lat/Lon',
-  zoom: 'Zoom',
-  latLonWillBeHere: 'Lat/Lon (None - please mouse over map)'
+  locate: 'Locate',
+  clearHistoryTooltip: 'Clear the tracked positions history',
+  locateTooltip: 'Center the view on the ISS',
+  lastPosition: 'Last position',
+  lat: 'Lat',
+  lon: 'Lon',
+  alt: 'Alt',
+  selectMapHint: 'Select a 2D map or a 3D scene in the settings panel.',
+  invalidPayload: 'Received invalid ISS coordinates.',
+  unknownError: 'Unknown error while fetching ISS position.',
 }

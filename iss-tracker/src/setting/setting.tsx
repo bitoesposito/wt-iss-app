@@ -5,20 +5,25 @@ import {
   SettingSection,
   SettingRow,
 } from 'jimu-ui/advanced/setting-components'
-import type { IMConfig } from '../config'
-import defaultI18nMessages from './translations/default'
 import { TextInput, NumericInput } from 'jimu-ui'
 
-export default function (props: AllWidgetSettingProps<IMConfig>) {
+import type { IMConfig } from '../config'
+import defaultI18nMessages from './translations/default'
 
-  function handleFetchUrlChange (event: React.ChangeEvent<HTMLInputElement>) {
+/**
+ * Settings panel for the ISS Tracker widget. Exposes the fetch endpoint,
+ * polling interval, position history cap, and the two map/scene widget
+ * slots the runtime view uses to render 2D and 3D positions.
+ */
+export default function Setting(props: AllWidgetSettingProps<IMConfig>): React.ReactElement {
+  const handleFetchUrlChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     props.onSettingChange({
       id: props.id,
       config: props.config.set('fetchUrl', event.target.value),
     })
   }
 
-  function handleRefreshIntervalChange (value: number) {
+  const handleRefreshIntervalChange = (value: number) => {
     if (value === undefined) return
     props.onSettingChange({
       id: props.id,
@@ -26,7 +31,7 @@ export default function (props: AllWidgetSettingProps<IMConfig>) {
     })
   }
 
-  function handleMaxPositionCountChange (value: number) {
+  const handleMaxPositionCountChange = (value: number) => {
     if (value === undefined) return
     props.onSettingChange({
       id: props.id,
@@ -34,19 +39,23 @@ export default function (props: AllWidgetSettingProps<IMConfig>) {
     })
   }
 
-  function handleMap2dSelected (useMapWidgetIds: string[]) {
+  const handleMap2dSelected = (useMapWidgetIds: string[]) => {
     props.onSettingChange({
       id: props.id,
       useMapWidgetIds,
     })
   }
 
-  function handleMap3dSelected (ids: string[]) {
+  const handleMap3dSelected = (ids: string[]) => {
     props.onSettingChange({
       id: props.id,
       config: props.config.set('sceneWidgetId', ids?.[0] ?? ''),
     })
   }
+
+  const sceneWidgetIds = props.config.sceneWidgetId
+    ? Immutable([props.config.sceneWidgetId])
+    : Immutable([])
 
   return (
     <>
@@ -58,7 +67,8 @@ export default function (props: AllWidgetSettingProps<IMConfig>) {
       >
         <SettingRow>
           <TextInput
-            id="fetchUrlInput"
+            id='fetchUrlInput'
+            style={{ width: '100%' }}
             value={props.config.fetchUrl ?? ''}
             placeholder={props.intl.formatMessage({
               id: 'fetchUrlPlaceholder',
@@ -77,14 +87,13 @@ export default function (props: AllWidgetSettingProps<IMConfig>) {
       >
         <SettingRow>
           <NumericInput
-            type="number"
-            id="refreshIntervalInput"
+            id='refreshIntervalInput'
             value={props.config.refreshInterval}
             placeholder={props.intl.formatMessage({
               id: 'refreshIntervalPlaceholder',
               defaultMessage: defaultI18nMessages.refreshIntervalPlaceholder,
             })}
-            onChange={(value) => { handleRefreshIntervalChange(value) }}
+            onChange={handleRefreshIntervalChange}
           />
         </SettingRow>
       </SettingSection>
@@ -97,14 +106,13 @@ export default function (props: AllWidgetSettingProps<IMConfig>) {
       >
         <SettingRow>
           <NumericInput
-            type="number"
-            id="maxPositionCountInput"
+            id='maxPositionCountInput'
             value={props.config.maxPositionCount}
             placeholder={props.intl.formatMessage({
               id: 'maxPositionCountPlaceholder',
               defaultMessage: defaultI18nMessages.maxPositionCountPlaceholder,
             })}
-            onChange={(value) => { handleMaxPositionCountChange(value) }}
+            onChange={handleMaxPositionCountChange}
           />
         </SettingRow>
       </SettingSection>
@@ -132,7 +140,7 @@ export default function (props: AllWidgetSettingProps<IMConfig>) {
         <SettingRow>
           <MapWidgetSelector
             onSelect={handleMap3dSelected}
-            useMapWidgetIds={props.config.sceneWidgetId ? Immutable([props.config.sceneWidgetId]) : Immutable([])}
+            useMapWidgetIds={sceneWidgetIds}
           />
         </SettingRow>
       </SettingSection>

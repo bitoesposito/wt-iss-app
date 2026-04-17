@@ -9,7 +9,15 @@ import { TextInput } from 'jimu-ui'
 import type { IMConfig } from '../config'
 import defaultI18nMessages from './translations/default'
 
-export default function Setting(props: AllWidgetSettingProps<IMConfig>) {
+const fullWidthStyle = { width: '100%' }
+const hintStyle = { fontSize: 12, opacity: 0.7 }
+
+/**
+ * Settings panel for the Satellite Orbit Tracker widget. The channel id
+ * must match the one exposed by the upstream Satellite Map widget so the
+ * two widgets can share a selection without relying on globals.
+ */
+export default function Setting(props: AllWidgetSettingProps<IMConfig>): React.ReactElement {
   const handleMapSelected = (useMapWidgetIds: string[]) => {
     props.onSettingChange({
       id: props.id,
@@ -49,7 +57,7 @@ export default function Setting(props: AllWidgetSettingProps<IMConfig>) {
         <SettingRow>
           <TextInput
             id='channelIdInput'
-            className='w-100'
+            style={fullWidthStyle}
             value={props.config.channelId ?? ''}
             placeholder={props.intl.formatMessage({
               id: 'channelIdPlaceholder',
@@ -59,7 +67,7 @@ export default function Setting(props: AllWidgetSettingProps<IMConfig>) {
           />
         </SettingRow>
         <SettingRow>
-          <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+          <span style={hintStyle}>
             {props.intl.formatMessage({
               id: 'channelIdDescription',
               defaultMessage: defaultI18nMessages.channelIdDescription,

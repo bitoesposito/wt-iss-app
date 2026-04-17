@@ -5,16 +5,14 @@
   "version": "1.20.0",
   "exbVersion": "1.20.0",
   "dependency": ["jimu-arcgis"],
-  "author": "Vito Esposito ",
-  "description": "This widget displays the current position of the International Space Station (ISS) with a refreshing interval of 10 seconds.",
+  "author": "Vito Esposito",
+  "description": "Tracks the current position of the International Space Station (ISS) and plots it on a 2D map and a 3D scene.",
   "copyright": "",
   "license": "http://www.apache.org/licenses/LICENSE-2.0",
   "properties": {},
-  "translatedLocales": [
-    "en"
-  ],
+  "translatedLocales": ["en"],
   "defaultSize": {
     "width": 400,
-    "height": 200
+    "height": 220
   }
 }
