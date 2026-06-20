@@ -53,3 +53,9 @@ jspm_packages/
 # System files
 .DS_Store
 Thumbs.db
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
