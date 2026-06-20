@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && NODE_OPTIONS=--max-old-space-size=4096 vite build",
-    "preview": "vite preview"
+    "preview": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@arcgis/core": "~4.34.0",
@@ -22,11 +23,13 @@
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.42.1",
     "@types/node": "~24.10.1",
     "@types/react": "~19.2.2",
     "@types/react-dom": "~19.2.2",
     "@vitejs/plugin-react": "~5.1.2",
     "typescript": "~5.9.3",
-    "vite": "^7.2.2"
+    "vite": "^7.2.2",
+    "wrangler": "^4.103.0"
   }
 }
