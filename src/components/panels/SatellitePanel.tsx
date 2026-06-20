@@ -37,13 +37,6 @@ export default function SatellitePanel({
 
   const isFiltering = query.trim().length > 0
 
-  const handleCenter = (sat: TleSatellite) => {
-    const key = getSatelliteKey(sat)
-    dispatch(setActiveSatelliteKey(key))
-    if (selectedKeySet.has(key)) return
-    dispatch(setSelectedSatellites([...selected, sat]))
-  }
-
   const handleToggle = (sat: TleSatellite) => {
     const key = getSatelliteKey(sat)
     if (selectedKeySet.has(key)) {
@@ -201,13 +194,6 @@ export default function SatellitePanel({
                   {sat.name}
                 </span>
               </calcite-label>
-              {/* <calcite-action
-                icon='zoom-to-object'
-                scale='s'
-                text='Centra sulla mappa'
-                aria-label={`Centra ${sat.name} sulla mappa`}
-                onClick={() => handleCenter(sat)}
-              ></calcite-action> */}
             </div>
           )
         })
