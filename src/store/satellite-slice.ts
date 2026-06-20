@@ -1,29 +1,32 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
-import type { TleSatellite } from "../types";
-
-type SatelliteState = {
-  positions: TleSatellite[];
-  selected: TleSatellite[];
-  activeSatelliteKey: string | null;
-};
+import type { SatelliteState, TleSatellite } from "../types";
 
 const initialState: SatelliteState = {
   positions: [],
   selected: [],
   activeSatelliteKey: null,
+  status: "idle",
+  error: null,
 };
 
 export const satelliteSlice = createSlice({
   name: "satellites",
   initialState,
   reducers: {
+    setSatellitesLoading: (state) => {
+      state.status = "loading";
+      state.error = null;
+    },
     setSatellitePositions: (state, action: PayloadAction<TleSatellite[]>) => {
       state.positions = action.payload;
+      state.status = "ready";
+      state.error = null;
     },
-    clearSatellitePositions: (state) => {
-      state.positions = [];
+    setSatellitesError: (state, action: PayloadAction<string>) => {
+      state.status = "error";
+      state.error = action.payload;
     },
     setSelectedSatellites: (state, action: PayloadAction<TleSatellite[]>) => {
       state.selected = action.payload;
@@ -37,15 +40,13 @@ export const satelliteSlice = createSlice({
     clearActiveSatelliteKey: (state) => {
       state.activeSatelliteKey = null;
     },
-    filterSatellitePositions: (state, action: PayloadAction<string>) => {
-      state.positions = state.positions.filter((satellite) => satellite.name.toLowerCase().includes(action.payload.toLowerCase()));
-    },
   },
 });
 
 export const {
+  setSatellitesLoading,
   setSatellitePositions,
-  clearSatellitePositions,
+  setSatellitesError,
   setSelectedSatellites,
   clearSelectedSatellites,
   setActiveSatelliteKey,

@@ -7,13 +7,24 @@ import GraphicsLayer from '@arcgis/core/layers/GraphicsLayer'
 import SpatialReference from '@arcgis/core/geometry/SpatialReference'
 import IconSymbol3DLayer from '@arcgis/core/symbols/IconSymbol3DLayer'
 import PointSymbol3D from '@arcgis/core/symbols/PointSymbol3D'
-import * as satellite from 'satellite.js'
 
 import type { TleSatellite } from '../types'
 import {
   getArcgisMapFromElement,
   getArcgisViewFromElement,
 } from '../types/arcgis-map'
+import { propagateTleToGeodetic } from '../lib/satellite/propagate'
+import { getSatelliteKey } from '../lib/satellite/satellite-utils'
+import {
+  ACTIVE_BLUE,
+  MARKER_SIZE_SAT,
+  SAT_FOCUS_ZOOM,
+  SAT_RENDER_CHUNK_SIZE,
+  TRACK_BLUE,
+  TRACK_STEP_SECONDS,
+  TRACK_WINDOW_MINUTES,
+  WHITE_OUTLINE,
+} from '../lib/map-style'
 
 type UseSatGraphicLayerParams = {
   mapElement: HTMLElement | null
@@ -21,62 +32,22 @@ type UseSatGraphicLayerParams = {
   activeSatelliteKey?: string | null
 }
 
-// Converte un TLE (line1/line2) in un Point (lon/lat/alt) valido per ArcGIS.
-// Se la propagazione fallisce, ritorna `null` e quel satellite viene saltato.
-const getSatellitePointFromTle = (params: {
+// Cede il controllo al event-loop tra un chunk e l'altro: con selezioni grandi
+// la UI resta reattiva invece di bloccarsi per migliaia di propagazioni SGP4.
+const yieldToEventLoop = () =>
+  new Promise<void>((resolve) => setTimeout(resolve, 0))
+
+const satellitePoint = (params: {
   line1: string
   line2: string
   date: Date
 }): Point | null => {
-  const { line1, line2, date } = params
-
-  let satrec: ReturnType<typeof satellite.twoline2satrec>
-  try {
-    satrec = satellite.twoline2satrec(line1, line2)
-  } catch {
-    return null
-  }
-
-  const positionAndVelocity = satellite.propagate(satrec, date)
-  if (!positionAndVelocity) return null
-  const positionEci = positionAndVelocity.position
-
-  if (
-    !positionEci ||
-    typeof positionEci.x !== 'number' ||
-    typeof positionEci.y !== 'number' ||
-    typeof positionEci.z !== 'number'
-  ) {
-    return null
-  }
-
-  const gmst = satellite.gstime(date)
-  const positionGd = satellite.eciToGeodetic(positionEci, gmst)
-
-  if (
-    typeof positionGd.longitude !== 'number' ||
-    typeof positionGd.latitude !== 'number' ||
-    typeof positionGd.height !== 'number'
-  ) {
-    return null
-  }
-
-  const longitude = satellite.degreesLong(positionGd.longitude)
-  const latitude = satellite.degreesLat(positionGd.latitude)
-  const altitudeMeters = positionGd.height * 1000
-
-  if (
-    !Number.isFinite(longitude) ||
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(altitudeMeters)
-  ) {
-    return null
-  }
-
+  const geodetic = propagateTleToGeodetic(params)
+  if (!geodetic) return null
   return new Point({
-    longitude,
-    latitude,
-    z: altitudeMeters,
+    longitude: geodetic.longitude,
+    latitude: geodetic.latitude,
+    z: geodetic.altitudeMeters,
   })
 }
 
@@ -92,9 +63,9 @@ const createSatelliteGraphic = (params: {
     symbolLayers: [
       new IconSymbol3DLayer({
         resource: { primitive: 'circle' },
-        size: 10,
-        material: { color: [59, 130, 246, 1] },
-        outline: { color: [255, 255, 255, 1], size: 1 },
+        size: MARKER_SIZE_SAT,
+        material: { color: ACTIVE_BLUE },
+        outline: { color: WHITE_OUTLINE, size: 1 },
       }),
     ],
   })
@@ -125,6 +96,54 @@ const createSatelliteGraphic = (params: {
   })
 }
 
+const buildTrackGraphic = (sat: TleSatellite, now: number): Graphic | null => {
+  const points: Array<[number, number, number]> = []
+
+  for (
+    let seconds = 0;
+    seconds <= TRACK_WINDOW_MINUTES * 60;
+    seconds += TRACK_STEP_SECONDS
+  ) {
+    const point = satellitePoint({
+      line1: sat.line1,
+      line2: sat.line2,
+      date: new Date(now + seconds * 1000),
+    })
+    if (!point) continue
+
+    const lon = point.longitude
+    const lat = point.latitude
+    const z = point.z ?? 0
+
+    if (
+      typeof lon !== 'number' ||
+      typeof lat !== 'number' ||
+      !Number.isFinite(lon) ||
+      !Number.isFinite(lat) ||
+      !Number.isFinite(z)
+    ) {
+      continue
+    }
+
+    points.push([lon, lat, z])
+  }
+
+  if (points.length < 2) return null
+
+  return new Graphic({
+    geometry: new Polyline({
+      paths: [points],
+      spatialReference: SpatialReference.WGS84,
+    }),
+    symbol: {
+      type: 'simple-line',
+      color: TRACK_BLUE,
+      width: 1.5,
+    } as const,
+    attributes: { name: sat.name, noradId: sat.noradId },
+  })
+}
+
 export default function useSatGraphicLayer({
   mapElement,
   positions,
@@ -134,7 +153,7 @@ export default function useSatGraphicLayer({
   const tracksLayerRef = useRef<GraphicsLayer | null>(null)
   const [layerVersion, setLayerVersion] = useState(0)
 
-  // 1) Crea e aggancia il layer alla mappa appena l’elemento ArcGIS è pronto.
+  // 1) Crea e aggancia i layer alla mappa appena l'elemento ArcGIS è pronto.
   useEffect(() => {
     if (!mapElement) return
 
@@ -187,49 +206,56 @@ export default function useSatGraphicLayer({
     }
   }, [mapElement])
 
-  // 2) Ogni volta che cambiano i TLE, ricreiamo i Graphic e li mettiamo nel layer.
+  // 2) Marker posizioni: ricostruiti a chunk per non bloccare il main thread.
   useEffect(() => {
     const positionsLayer = positionsLayerRef.current
-    const tracksLayer = tracksLayerRef.current
-    if (!positionsLayer || !tracksLayer) return
+    if (!positionsLayer) return
 
+    let cancelled = false
     positionsLayer.removeAll()
-    tracksLayer.removeAll()
 
     const now = Date.now()
     const date = new Date(now)
 
-    for (const sat of positions) {
-      const point = getSatellitePointFromTle({
-        line1: sat.line1,
-        line2: sat.line2,
-        date,
-      })
+    const run = async () => {
+      for (let i = 0; i < positions.length; i += SAT_RENDER_CHUNK_SIZE) {
+        if (cancelled) return
 
-      if (!point) continue
+        const chunk = positions.slice(i, i + SAT_RENDER_CHUNK_SIZE)
+        const graphics: Graphic[] = []
 
-      const graphic = createSatelliteGraphic({
-        satellite: sat,
-        point,
-        timestamp: now,
-      })
+        for (const sat of chunk) {
+          const point = satellitePoint({
+            line1: sat.line1,
+            line2: sat.line2,
+            date,
+          })
+          if (!point) continue
+          graphics.push(createSatelliteGraphic({ satellite: sat, point, timestamp: now }))
+        }
 
-      positionsLayer.add(graphic)
+        if (cancelled) return
+        positionsLayer.addMany(graphics)
+        await yieldToEventLoop()
+      }
+    }
+
+    void run()
+
+    return () => {
+      cancelled = true
     }
   }, [positions, layerVersion])
 
+  // 3) Centra la vista sul satellite attivo.
   useEffect(() => {
     if (!mapElement) return
     if (!activeSatelliteKey) return
 
-    const getSatelliteKey = (sat: TleSatellite) => {
-      return `${sat.noradId ?? 'no-norad'}-${sat.name}`
-    }
-
     const sat = positions.find((s) => getSatelliteKey(s) === activeSatelliteKey)
     if (!sat) return
 
-    const point = getSatellitePointFromTle({
+    const point = satellitePoint({
       line1: sat.line1,
       line2: sat.line2,
       date: new Date(),
@@ -249,12 +275,7 @@ export default function useSatGraphicLayer({
       if (!view?.goTo) return
 
       try {
-        await view.goTo(
-          {
-            center: point,
-            zoom: 4,
-          }
-        )
+        await view.goTo({ center: point, zoom: SAT_FOCUS_ZOOM })
       } catch {
         return
       }
@@ -267,73 +288,38 @@ export default function useSatGraphicLayer({
     }
   }, [activeSatelliteKey, mapElement, positions, layerVersion])
 
+  // 4) Tracce orbitali (finestra di 90 min): ricostruite a chunk.
   useEffect(() => {
     const tracksLayer = tracksLayerRef.current
     if (!tracksLayer) return
 
+    let cancelled = false
     tracksLayer.removeAll()
 
-    const TRACK_WINDOW_MINUTES = 90
-    const STEP_SECONDS = 120
     const now = Date.now()
 
-    for (const sat of positions) {
-      const points: Array<[number, number, number]> = []
+    const run = async () => {
+      for (let i = 0; i < positions.length; i += SAT_RENDER_CHUNK_SIZE) {
+        if (cancelled) return
 
-      for (
-        let seconds = 0;
-        seconds <= TRACK_WINDOW_MINUTES * 60;
-        seconds += STEP_SECONDS
-      ) {
-        const point = getSatellitePointFromTle({
-          line1: sat.line1,
-          line2: sat.line2,
-          date: new Date(now + seconds * 1000),
-        })
+        const chunk = positions.slice(i, i + SAT_RENDER_CHUNK_SIZE)
+        const graphics: Graphic[] = []
 
-        if (!point) continue
-
-        const lon = point.longitude
-        const lat = point.latitude
-        const z = point.z ?? 0
-
-        if (
-          typeof lon !== 'number' ||
-          typeof lat !== 'number' ||
-          typeof z !== 'number' ||
-          !Number.isFinite(lon) ||
-          !Number.isFinite(lat) ||
-          !Number.isFinite(z)
-        ) {
-          continue
+        for (const sat of chunk) {
+          const graphic = buildTrackGraphic(sat, now)
+          if (graphic) graphics.push(graphic)
         }
 
-        points.push([lon, lat, z])
+        if (cancelled) return
+        tracksLayer.addMany(graphics)
+        await yieldToEventLoop()
       }
+    }
 
-      if (points.length < 2) continue
+    void run()
 
-      const polyline = new Polyline({
-        paths: [points],
-        spatialReference: SpatialReference.WGS84,
-      })
-
-      const symbol = {
-        type: 'simple-line',
-        color: [59, 130, 246, 0.33],
-        width: 1.5,
-      } as const
-
-      tracksLayer.add(
-        new Graphic({
-          geometry: polyline,
-          symbol,
-          attributes: {
-            name: sat.name,
-            noradId: sat.noradId,
-          },
-        }),
-      )
+    return () => {
+      cancelled = true
     }
   }, [positions, layerVersion])
 }

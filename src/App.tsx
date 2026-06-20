@@ -1,87 +1,131 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 
 import type { AppDispatch, RootState } from './store'
-import { fetchIssPosition } from './lib/iss-position-tracker'
-import { fetchStationsTle } from './lib/satellite-position-tracker'
-import { setSatellitePositions } from './store/satellite-slice'
+import type { ViewMode } from './types'
+import { subscribeIssTelemetry } from './lib/iss-stream'
+import { loadIssTle } from './lib/iss-orbit'
+import { fetchSatellites } from './lib/satellite-position-tracker'
+import { setViewMode } from './store/view-slice'
 
 import MapComponent from './components/map/Map'
-import SidebarComponent from './components/sidebar/Sidebar'
-import NavbarComponent from './components/navbar/Navbar'
-import IssMenu from './components/sidebar/IssMenu'
-import SatelliteMenu from './components/sidebar/SatelliteMenu'
+import IssPanel from './components/panels/IssPanel'
+import SatellitePanel from './components/panels/SatellitePanel'
 
-const ISS_POLL_INTERVAL_MS = 10_000
+const MOBILE_QUERY = '(max-width: 768px)'
 
 export function App(): React.JSX.Element {
   const dispatch = useDispatch<AppDispatch>()
-  const viewMode = useSelector((state: RootState) => state.viewMode.viewMode)
-  const satellitePositionsCount = useSelector(
-    (state: RootState) => state.satellites.positions.length,
+  const viewMode = useSelector((s: RootState) => s.viewMode.viewMode)
+  const satelliteStatus = useSelector((s: RootState) => s.satellites.status)
+
+  const [isMobile, setIsMobile] = useState(
+    () => window.matchMedia(MOBILE_QUERY).matches,
   )
-  const satellitePositions = useSelector(
-    (state: RootState) => state.satellites.positions,
-  )
-  const selectedSatellites = useSelector(
-    (state: RootState) => state.satellites.selected,
+  // Su mobile il pannello parte chiuso così la mappa è subito visibile.
+  const [panelOpen, setPanelOpen] = useState(
+    () => !window.matchMedia(MOBILE_QUERY).matches,
   )
 
   useEffect(() => {
-    dispatch(fetchIssPosition())
-    const interval = setInterval(
-      () => dispatch(fetchIssPosition()),
-      ISS_POLL_INTERVAL_MS,
-    )
-    return () => clearInterval(interval)
-  }, [dispatch])
+    const mq = window.matchMedia(MOBILE_QUERY)
+    const handler = (event: MediaQueryListEvent) => setIsMobile(event.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
+  // Stream SSE della posizione ISS, sospeso quando la tab non è visibile.
   useEffect(() => {
-    if (viewMode !== 'satellite') return
-    if (satellitePositionsCount > 0) return
+    let unsubscribe: (() => void) | null = null
 
-    let isCancelled = false
-
-    const run = async () => {
-      try {
-        const satellites = await fetchStationsTle()
-        if (isCancelled) return
-        dispatch(setSatellitePositions(satellites))
-      } catch {
-        return
-      }
+    const open = () => {
+      if (!unsubscribe) unsubscribe = subscribeIssTelemetry(dispatch)
+    }
+    const close = () => {
+      unsubscribe?.()
+      unsubscribe = null
+    }
+    const handleVisibility = () => {
+      if (document.hidden) close()
+      else open()
     }
 
-    void run()
+    if (!document.hidden) open()
+    document.addEventListener('visibilitychange', handleVisibility)
 
     return () => {
-      isCancelled = true
+      document.removeEventListener('visibilitychange', handleVisibility)
+      close()
     }
-  }, [dispatch, satellitePositionsCount, viewMode])
+  }, [dispatch])
+
+  // TLE ISS (Celestrak) per la traiettoria orbitale.
+  useEffect(() => {
+    dispatch(loadIssTle())
+  }, [dispatch])
+
+  // Caricamento TLE satelliti, una sola volta entrando in modalità satellite.
+  useEffect(() => {
+    if (viewMode !== 'satellite') return
+    if (satelliteStatus !== 'idle') return
+    dispatch(fetchSatellites())
+  }, [dispatch, viewMode, satelliteStatus])
+
+  // Click sulla modalità attiva → toggle pannello; altra modalità → switch + apri.
+  const selectMode = (mode: ViewMode) => {
+    if (mode === viewMode) {
+      setPanelOpen((open) => !open)
+      return
+    }
+    dispatch(setViewMode(mode))
+    setPanelOpen(true)
+  }
 
   return (
     <calcite-shell>
-      <div id='mobile' className='md:hidden flex flex-col h-screen'>
-        <NavbarComponent />
-        <div className='h-[60dvh] shrink-0 relative overflow-hidden'>
-          <MapComponent key={viewMode} />
-        </div>
-        <div className='flex-1 min-h-0 overflow-y-auto border-t border-slate-200'>
-          {viewMode === 'iss' ? (
-            <IssMenu />
-          ) : (
-            <SatelliteMenu
-              satellitePositions={satellitePositions}
-              selectedSatellites={selectedSatellites}
-              dispatch={dispatch}
-            />
-          )}
-        </div>
-      </div>
-      <div id='desktop' className='md:flex flex-row hidden h-full'>
-        <SidebarComponent />
-        <MapComponent key={viewMode} />
-      </div>
+      <header
+        slot='header'
+        className='flex items-center gap-2 border-b border-white/10 px-3 py-2'
+      >
+        <img src='logo.svg' alt='Satellite Tracker' className='h-6' />
+        <div className='h-6 w-px bg-white/20' />
+        <img src='esri.svg' alt='Esri' className='h-5 invert' />
+        <span className='ml-2 text-sm font-semibold'>Satellite Tracker</span>
+      </header>
+
+      <calcite-shell-panel
+        slot='panel-start'
+        display-mode={isMobile ? 'overlay' : 'dock'}
+        width-scale='m'
+        collapsed={!panelOpen}
+      >
+        <calcite-action-bar slot='action-bar'>
+          <calcite-action-group>
+            <calcite-action
+              text='ISS'
+              icon='globe'
+              active={viewMode === 'iss'}
+              onClick={() => selectMode('iss')}
+            ></calcite-action>
+            <calcite-action
+              text='Satelliti'
+              icon='layers'
+              active={viewMode === 'satellite'}
+              onClick={() => selectMode('satellite')}
+            ></calcite-action>
+          </calcite-action-group>
+        </calcite-action-bar>
+
+        {viewMode === 'iss' ? (
+          <IssPanel onCollapse={() => setPanelOpen(false)} />
+        ) : (
+          <SatellitePanel onCollapse={() => setPanelOpen(false)} />
+        )}
+      </calcite-shell-panel>
+
+      {/* key={viewMode}: remount intenzionale per ripartire da vista pulita
+          quando si passa tra mappa ISS (2D/3D) e scene satellitare. */}
+      <MapComponent key={viewMode} />
     </calcite-shell>
   )
 }

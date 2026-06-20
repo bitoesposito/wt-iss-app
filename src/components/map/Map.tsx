@@ -1,8 +1,5 @@
 import '@arcgis/map-components/components/arcgis-map'
 import '@arcgis/map-components/components/arcgis-scene'
-import '@arcgis/map-components/components/arcgis-zoom'
-import '@arcgis/map-components/components/arcgis-navigation-toggle'
-import '@arcgis/map-components/components/arcgis-compass'
 import '@arcgis/map-components/components/arcgis-expand'
 
 import { useCallback, useEffect, useRef } from 'react'
@@ -18,8 +15,10 @@ import { clearActiveSatelliteKey } from '../../store/satellite-slice'
 
 import useIssGraphicLayer from '../../hooks/use-iss-graphic'
 import useIssSceneGraphic from '../../hooks/use-iss-scene-graphic.ts'
+import useIssOrbitTrack from '../../hooks/use-iss-orbit-track'
 import useSatGraphicLayer from '../../hooks/use-sat-graphic'
 import SatelliteOrbitTrackerComponent from '../widgets/SatelliteOrbitTracker'
+import MapViewControls from './MapViewControls'
 
 type ViewpointLike = {
   clone: () => ViewpointLike
@@ -64,6 +63,8 @@ export default function MapComponent() {
     (state: RootState) => state.iss.issDimension,
   )
   const issPositions = useSelector((state: RootState) => state.iss.positions)
+  const issTle = useSelector((state: RootState) => state.iss.tle)
+  const follow = useSelector((state: RootState) => state.iss.follow)
   const activeIssPositionKey = useSelector(
     (state: RootState) => state.iss.activeIssPositionKey,
   )
@@ -107,6 +108,7 @@ export default function MapComponent() {
     mapElement: isIssMode && !is3D ? mapElementRef.current : null,
     positions: issPositions,
     activeIssPositionKey,
+    follow,
     onSelectIssPositionKey: handleSelectIssPositionKey,
   })
 
@@ -114,6 +116,19 @@ export default function MapComponent() {
     sceneElement: isIssMode && is3D ? issSceneElementRef.current : null,
     positions: issPositions,
     activeIssPositionKey,
+    follow,
+  })
+
+  useIssOrbitTrack({
+    mapElement: isIssMode && !is3D ? mapElementRef.current : null,
+    tle: issTle,
+    withAltitude: false,
+  })
+
+  useIssOrbitTrack({
+    mapElement: isIssMode && is3D ? issSceneElementRef.current : null,
+    tle: issTle,
+    withAltitude: true,
   })
 
   useSatGraphicLayer({
@@ -140,22 +155,25 @@ export default function MapComponent() {
             basemap='dark-gray-vector'
             className={`iss-overlay-view ${is3D ? 'visible' : ''}`}
           >
-            <arcgis-zoom className='pb-3' slot='top-left'></arcgis-zoom>
-            <arcgis-navigation-toggle
-              className='pb-3'
-              slot='top-left'
-            ></arcgis-navigation-toggle>
-            <arcgis-compass className='pb-3' slot='top-left'></arcgis-compass>
+            <MapViewControls />
           </arcgis-scene>
           <div className='absolute top-4 right-4 z-10'>
-            <calcite-button
-              alignment='start'
-              appearance='outline-fill'
-              kind='neutral'
-              onClick={handleToggleDimension}
+            <calcite-segmented-control
+              aria-label='Dimensione vista'
+              scale='s'
+              oncalciteSegmentedControlChange={(event: CustomEvent) => {
+                const value = (event.target as unknown as { value?: string })
+                  .value
+                if ((value === '3d') !== is3D) handleToggleDimension()
+              }}
             >
-              {is3D ? '2D' : '3D'}
-            </calcite-button>
+              <calcite-segmented-control-item value='2d' checked={!is3D}>
+                2D
+              </calcite-segmented-control-item>
+              <calcite-segmented-control-item value='3d' checked={is3D}>
+                3D
+              </calcite-segmented-control-item>
+            </calcite-segmented-control>
           </div>
         </>
       ) : (
@@ -166,12 +184,7 @@ export default function MapComponent() {
           basemap='dark-gray-vector'
           className='absolute inset-0'
         >
-          <arcgis-zoom className='pb-3' slot='top-left'></arcgis-zoom>
-          <arcgis-navigation-toggle
-            className='pb-3'
-            slot='top-left'
-          ></arcgis-navigation-toggle>
-          <arcgis-compass className='pb-3' slot='top-left'></arcgis-compass>
+          <MapViewControls />
           <arcgis-expand
             className='pb-3'
             slot='top-right'

@@ -9,20 +9,27 @@ import {
   getArcgisMapFromElement,
   getArcgisViewFromElement,
 } from '../types/arcgis-map'
+import { getIssKey } from '../lib/iss-utils'
+import {
+  ACTIVE_BLUE,
+  DEFAULT_ZOOM,
+  LATEST_GREEN,
+  MARKER_SIZE_ACTIVE,
+  MARKER_SIZE_LATEST,
+  MARKER_SIZE_MUTED,
+  MUTED_GRAY,
+  WHITE_OUTLINE,
+} from '../lib/map-style'
 
 type UseIssGraphicLayerParams = {
   mapElement: HTMLElement | null
   positions: IssPosition[]
   activeIssPositionKey: string | null
+  follow: boolean
   onSelectIssPositionKey: (key: string | null) => void
 }
 
 const POPUP_DEBOUNCE_MS = 120
-const DEFAULT_ZOOM = 3
-
-const getIssKey = (position: IssPosition) => {
-  return `${position.timestamp}-${position.latitude}-${position.longitude}`
-}
 
 const createGraphic = (params: {
   position: IssPosition
@@ -39,12 +46,12 @@ const createGraphic = (params: {
 
   const isGreenLatest = isLatest && !isActive
 
-  const size = isActive ? 12 : isGreenLatest ? 12 : 8
-  const color = isActive
-    ? ([59, 130, 246, 1] as const)
+  const size = isActive
+    ? MARKER_SIZE_ACTIVE
     : isGreenLatest
-      ? ([34, 197, 94, 1] as const)
-      : ([156, 163, 175, 0.7] as const)
+      ? MARKER_SIZE_LATEST
+      : MARKER_SIZE_MUTED
+  const color = isActive ? ACTIVE_BLUE : isGreenLatest ? LATEST_GREEN : MUTED_GRAY
 
   const symbol = {
     type: 'simple-marker',
@@ -52,7 +59,7 @@ const createGraphic = (params: {
     size,
     color,
     outline: {
-      color: [255, 255, 255, 1],
+      color: WHITE_OUTLINE,
       width: 1,
     },
   } as const
@@ -81,6 +88,7 @@ export default function useIssGraphicLayer({
   mapElement,
   positions,
   activeIssPositionKey,
+  follow,
   onSelectIssPositionKey,
 }: UseIssGraphicLayerParams) {
   const layerRef = useRef<GraphicsLayer | null>(null)
@@ -203,6 +211,7 @@ export default function useIssGraphicLayer({
 
   useEffect(() => {
     if (!mapElement) return
+    if (!follow) return
     if (activeKey) return
     const latest = positions[0]
     if (!latest) return
@@ -249,7 +258,7 @@ export default function useIssGraphicLayer({
     return () => {
       isCancelled = true
     }
-  }, [activeKey, mapElement, positions])
+  }, [activeKey, follow, mapElement, positions])
 
   useEffect(() => {
     if (!mapElement) return

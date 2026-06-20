@@ -10,15 +10,22 @@ import IconSymbol3DLayer from '@arcgis/core/symbols/IconSymbol3DLayer'
 import type { IssPosition } from '../types'
 import { getArcgisMapFromElement, waitForView } from '../types/arcgis-map'
 import { getIssKey } from '../lib/iss-utils'
+import {
+  ACTIVE_BLUE,
+  DEFAULT_ISS_ALTITUDE_KM,
+  ISS_MODEL_HEIGHT_M,
+  MUTED_GRAY_3D,
+  TRAIL_SIZE_ACTIVE_3D,
+  TRAIL_SIZE_DEFAULT_3D,
+  WHITE_OUTLINE_SOFT,
+} from '../lib/map-style'
 
 type UseIssSceneGraphicParams = {
   sceneElement: HTMLElement | null
   positions: IssPosition[]
   activeIssPositionKey: string | null
+  follow: boolean
 }
-
-const DEFAULT_ISS_ALTITUDE_KM = 408
-const ISS_MODEL_HEIGHT = 300_000
 
 const getAltitudeMeters = (position: IssPosition) =>
   (position.altitude ?? DEFAULT_ISS_ALTITUDE_KM) * 1000
@@ -28,9 +35,9 @@ const createDefaultTrailSymbol = () =>
     symbolLayers: [
       new IconSymbol3DLayer({
         resource: { primitive: 'circle' },
-        size: 5,
-        material: { color: [156, 163, 175, 0.6] },
-        outline: { color: [255, 255, 255, 0.8], size: 0.5 },
+        size: TRAIL_SIZE_DEFAULT_3D,
+        material: { color: MUTED_GRAY_3D },
+        outline: { color: WHITE_OUTLINE_SOFT, size: 0.5 },
       }),
     ],
   })
@@ -40,9 +47,9 @@ const createActiveTrailSymbol = () =>
     symbolLayers: [
       new IconSymbol3DLayer({
         resource: { primitive: 'circle' },
-        size: 8,
-        material: { color: [59, 130, 246, 1] },
-        outline: { color: [255, 255, 255, 0.8], size: 0.5 },
+        size: TRAIL_SIZE_ACTIVE_3D,
+        material: { color: ACTIVE_BLUE },
+        outline: { color: WHITE_OUTLINE_SOFT, size: 0.5 },
       }),
     ],
   })
@@ -58,7 +65,7 @@ const createIssModelGraphic = (position: IssPosition) => {
       symbolLayers: [
         new ObjectSymbol3DLayer({
           resource: { href: '/3d/iss-model.glb' },
-          height: ISS_MODEL_HEIGHT,
+          height: ISS_MODEL_HEIGHT_M,
         }),
       ],
     }),
@@ -98,6 +105,7 @@ export default function useIssSceneGraphic({
   sceneElement,
   positions,
   activeIssPositionKey,
+  follow,
 }: UseIssSceneGraphicParams) {
   const layerRef = useRef<GraphicsLayer | null>(null)
   const graphicsByKeyRef = useRef(new Map<string, Graphic>())
@@ -185,6 +193,7 @@ export default function useIssSceneGraphic({
 
   useEffect(() => {
     if (!sceneElement) return
+    if (!follow) return
     const latest = positions[0]
     if (!latest) return
 
@@ -211,7 +220,7 @@ export default function useIssSceneGraphic({
     return () => {
       cancelled = true
     }
-  }, [sceneElement, positions, layerVersion])
+  }, [sceneElement, positions, layerVersion, follow])
 
   useEffect(() => {
     if (!sceneElement) return

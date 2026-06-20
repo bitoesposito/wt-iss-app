@@ -8,11 +8,6 @@ body {
   margin: 0;
 }
 
-arcgis-chart {
-  width: 350px;
-  height: 250px;
-}
-
 .iss-overlay-view {
   position: absolute;
   inset: 0;

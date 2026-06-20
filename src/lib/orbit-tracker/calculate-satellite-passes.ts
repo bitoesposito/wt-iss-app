@@ -3,9 +3,9 @@ import SpatialReference from '@arcgis/core/geometry/SpatialReference'
 import type Geometry from '@arcgis/core/geometry/Geometry'
 import * as geometryEngine from '@arcgis/core/geometry/geometryEngine'
 import * as projectOperator from '@arcgis/core/geometry/operators/projectOperator'
-import * as satellite from 'satellite.js'
 
 import type { TleSatellite } from '../../types'
+import { propagateTleToGeodetic } from '../satellite/propagate'
 
 export type SatellitePass = {
   satName: string
@@ -24,51 +24,18 @@ type CalculateSatellitePassesParams = {
   maxSteps?: number
 }
 
+// Proietta il satellite al suolo (z=0) per il test di intersezione con l'AOI.
 const getGroundPointFromTle = (params: {
   line1: string
   line2: string
   date: Date
 }): Point | null => {
-  const { line1, line2, date } = params
-
-  let satrec: ReturnType<typeof satellite.twoline2satrec>
-  try {
-    satrec = satellite.twoline2satrec(line1, line2)
-  } catch {
-    return null
-  }
-
-  const positionAndVelocity = satellite.propagate(satrec, date)
-  if (!positionAndVelocity) return null
-  const positionEci = positionAndVelocity.position
-
-  if (
-    !positionEci ||
-    typeof positionEci.x !== 'number' ||
-    typeof positionEci.y !== 'number' ||
-    typeof positionEci.z !== 'number'
-  ) {
-    return null
-  }
-
-  const gmst = satellite.gstime(date)
-  const positionGd = satellite.eciToGeodetic(positionEci, gmst)
-
-  if (
-    typeof positionGd.longitude !== 'number' ||
-    typeof positionGd.latitude !== 'number'
-  ) {
-    return null
-  }
-
-  const longitude = satellite.degreesLong(positionGd.longitude)
-  const latitude = satellite.degreesLat(positionGd.latitude)
-
-  if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) return null
+  const geodetic = propagateTleToGeodetic(params)
+  if (!geodetic) return null
 
   return new Point({
-    longitude,
-    latitude,
+    longitude: geodetic.longitude,
+    latitude: geodetic.latitude,
     z: 0,
     spatialReference: SpatialReference.WGS84,
   })

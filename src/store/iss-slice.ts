@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit'
 
-import type { IssDimension, IssPosition, IssState } from '../types'
+import type { IssPosition, IssState, IssTle, OrbitalParams } from '../types'
 
 const MAX_ISS_POSITIONS = 40
 
@@ -9,6 +9,9 @@ const initialState: IssState = {
   positions: [],
   activeIssPositionKey: null,
   issDimension: '2d',
+  follow: true,
+  orbital: null,
+  tle: null,
 }
 
 export const issSlice = createSlice({
@@ -37,11 +40,20 @@ export const issSlice = createSlice({
     clearActiveIssPositionKey: (state) => {
       state.activeIssPositionKey = null
     },
-    setIssDimension: (state, action: PayloadAction<IssDimension>) => {
-      state.issDimension = action.payload
-    },
     toggleIssDimension: (state) => {
       state.issDimension = state.issDimension === '2d' ? '3d' : '2d'
+    },
+    setFollow: (state, action: PayloadAction<boolean>) => {
+      state.follow = action.payload
+    },
+    toggleFollow: (state) => {
+      state.follow = !state.follow
+    },
+    setIssOrbital: (state, action: PayloadAction<OrbitalParams>) => {
+      state.orbital = action.payload
+    },
+    setIssTle: (state, action: PayloadAction<IssTle>) => {
+      state.tle = action.payload
     },
   },
 })
@@ -50,7 +62,10 @@ export const {
   addIssPosition,
   setActiveIssPositionKey,
   clearActiveIssPositionKey,
-  setIssDimension,
   toggleIssDimension,
+  setFollow,
+  toggleFollow,
+  setIssOrbital,
+  setIssTle,
 } = issSlice.actions
 export default issSlice.reducer

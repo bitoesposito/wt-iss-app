@@ -1,12 +1,12 @@
 # WT ISS App
 
-WT ISS App is a training project built to explore Esri ArcGIS APIs and Calcite components. The app tracks the position of the ISS and other satellites on an interactive map, with charts and widgets highlighting orbital passes and live data.
+WT ISS App is a training project built to explore Esri ArcGIS APIs and Calcite components. The app tracks the position of the ISS and other satellites on an interactive map, with widgets highlighting orbital passes and live data.
 
 ## Key Features
 
 - Tracks the International Space Station (ISS) position
 - Displays satellites in orbit and their flight paths
-- Uses `@arcgis/core`, `@arcgis/map-components`, and `@arcgis/charts-components`
+- Uses `@arcgis/core` and `@arcgis/map-components`
 - UI built with `@esri/calcite-components`
 - Global state managed with Redux Toolkit
 - Implemented in React on the main branch (`main`)

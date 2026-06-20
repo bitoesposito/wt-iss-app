@@ -123,6 +123,18 @@ export default function SatelliteOrbitTrackerComponent() {
     isRunning,
   ]);
 
+  const missingRequirements = useMemo(() => {
+    const items: string[] = [];
+    if (!validation.hasPoint) items.push("Seleziona un punto sulla mappa");
+    if (!validation.hasSatellites)
+      items.push("Seleziona almeno un satellite dalla sidebar");
+    if (!validation.isBufferValid)
+      items.push("Area di interesse di almeno 10 km");
+    if (!validation.isRangeValid)
+      items.push("Intervallo valido: fine dopo l'inizio, max 6 giorni");
+    return items;
+  }, [validation]);
+
   const handleSetNow = () => {
     const now = new Date();
     const later = new Date(now.getTime() + 60 * 60 * 1000);
@@ -170,7 +182,14 @@ export default function SatelliteOrbitTrackerComponent() {
         }}
         className="p-3 select-none text-sm overflow-y-auto"
       >
-        <p className="text-base font-semibold">Satellite Orbit Tracker</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-base font-semibold">Satellite Orbit Tracker</p>
+          {results.length > 0 ? (
+            <calcite-chip scale="s" kind="brand" label="Passaggi trovati">
+              {results.length} passaggi
+            </calcite-chip>
+          ) : null}
+        </div>
 
         <section className="mt-2 mb-3 flex gap-2 justify-between">
           <arcgis-sketch
@@ -216,7 +235,7 @@ export default function SatelliteOrbitTrackerComponent() {
 
         <section className="grid">
           <calcite-label>
-            <span className="hidden md:block">Area di interesse</span>
+            <span>Area di interesse</span>
             <calcite-input-number
               min={10}
               step={1}
@@ -234,7 +253,7 @@ export default function SatelliteOrbitTrackerComponent() {
 
           <div className="grid grid-cols-2 gap-2">
             <calcite-label>
-              <span className="hidden md:block">Data inizio</span>
+              <span>Data inizio</span>
               <calcite-input-date-picker
                 value={startDate}
                 disabled={isRunning}
@@ -246,7 +265,7 @@ export default function SatelliteOrbitTrackerComponent() {
             </calcite-label>
 
             <calcite-label>
-              <span className="hidden md:block">Data fine</span>
+              <span>Data fine</span>
               <calcite-input-date-picker
                 value={endDate}
                 disabled={isRunning}
@@ -260,7 +279,7 @@ export default function SatelliteOrbitTrackerComponent() {
 
           <div className="grid grid-cols-2 gap-2">
             <calcite-label>
-              <span className="hidden md:block">Ora inizio</span>
+              <span>Ora inizio</span>
               <calcite-input-time-picker
                 hour-format="24"
                 step={60}
@@ -273,7 +292,7 @@ export default function SatelliteOrbitTrackerComponent() {
             </calcite-label>
 
             <calcite-label>
-              <span className="hidden md:block">Ora fine</span>
+              <span>Ora fine</span>
               <calcite-input-time-picker
                 hour-format="24"
                 step={60}
@@ -286,28 +305,16 @@ export default function SatelliteOrbitTrackerComponent() {
             </calcite-label>
           </div>
 
-          {!validation.isRangeValid && (startDate || endDate) ? (
-            <p className="text-[11px] text-red-200/90">
-              Intervallo non valido: la fine deve essere successiva all'inizio
-              (max 6 giorni).
-            </p>
-          ) : null}
-
-          {!validation.hasSatellites ? (
-            <p className="text-[11px] text-red-200/90 hidden md:block">
-              Seleziona almeno un satellite dalla sidebar.
-            </p>
-          ) : null}
-
           <calcite-button
-            className="mt-2 hidden md:block"
+            className="mt-2"
             width="full"
             appearance="outline"
             kind="neutral"
+            icon-start="clock"
             disabled={isRunning}
             onClick={handleSetNow}
           >
-            1 ora da adesso
+            Adesso → +1 ora
           </calcite-button>
         </section>
 
@@ -322,16 +329,29 @@ export default function SatelliteOrbitTrackerComponent() {
             Avvia calcolo
           </calcite-button>
 
-          {/* {results.length > 0 ? (
+          {/* Requisiti mancanti: spiega perché il calcolo è disabilitato. */}
+          {!validation.canRun && !isRunning && missingRequirements.length > 0 ? (
+            <ul className="grid gap-1 text-[11px] text-red-200/90">
+              {missingRequirements.map((requirement) => (
+                <li key={requirement} className="flex items-center gap-1">
+                  <calcite-icon icon="exclamation-mark-triangle" scale="s" />
+                  {requirement}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {results.length > 0 ? (
             <calcite-button
               width="full"
               appearance="outline"
               kind="neutral"
+              icon-start="list"
               onClick={() => setDialogOpen(true)}
             >
               Apri risultati ({results.length})
             </calcite-button>
-          ) : null} */}
+          ) : null}
         </section>
 
         {error ? (

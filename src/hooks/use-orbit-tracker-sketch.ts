@@ -10,6 +10,7 @@ import {
   getArcgisMapFromElement,
   getArcgisViewFromElement,
 } from '../types/arcgis-map'
+import { BUFFER_FILL, BUFFER_OUTLINE } from '../lib/map-style'
 
 type UseOrbitTrackerSketchParams = {
   sceneElement: HTMLElement | null
@@ -125,8 +126,8 @@ export default function useOrbitTrackerSketch({
         geometry: polygon,
         symbol: {
           type: 'simple-fill',
-          color: [59, 130, 246, 0.08],
-          outline: { color: [59, 130, 246, 0.6], width: 1.5 },
+          color: BUFFER_FILL,
+          outline: { color: BUFFER_OUTLINE, width: 1.5 },
         } as const,
       }),
     )

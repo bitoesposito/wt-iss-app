@@ -1,3 +1,9 @@
+import type { AppDispatch } from "../store";
+import {
+  setSatellitePositions,
+  setSatellitesError,
+  setSatellitesLoading,
+} from "../store/satellite-slice";
 import type { TleSatellite } from "../types";
 
 
@@ -48,4 +54,25 @@ export async function fetchStationsTle(): Promise<TleSatellite[]> {
   }
   const txt = await response.text();
   return parseTleText(txt);
+}
+
+/**
+ * Thunk: scarica i TLE e aggiorna lo stato (loading → ready/error).
+ */
+export function fetchSatellites() {
+  return async (dispatch: AppDispatch) => {
+    dispatch(setSatellitesLoading());
+    try {
+      const satellites = await fetchStationsTle();
+      dispatch(setSatellitePositions(satellites));
+    } catch (error) {
+      dispatch(
+        setSatellitesError(
+          error instanceof Error
+            ? error.message
+            : "Impossibile caricare i satelliti",
+        ),
+      );
+    }
+  };
 }
